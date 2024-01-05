@@ -88,6 +88,12 @@ function deleteHost() {
     })
 }
 
+function createDomain(name: string, domain?: string) {
+    if (domain) return domain;
+    if (name.match(/^(?:https?:\/\/)?(?:[^.]+\.)?example\.com(\/.*)?$/)) return name;
+    return name + '.test';
+}
+
 program
     .name('valet')
     .version('0.0.1')
@@ -101,7 +107,7 @@ program
     .action((props) => {
         let
             path = props.path || process.cwd(),
-            domain = props.domain || Fs.dirname(path) + '.loc';
+            domain = createDomain(Fs.dirname(path), props.domain);
         // write(domain);
         attrs.domain = domain;
         attrs.path = path;
@@ -112,10 +118,15 @@ program
 program
     .command('del')
     .description('Deletes virtual host')
-    .option('-d, --domain <domain>')
+    .option('-d, --domain <domain>', '-p, --path <path>')
     .action((props) => {
         if (props) {
-            attrs.domain = props.domain || Fs.dirname(process.cwd()) + '.local';
+            let path = props.path || process.cwd(),
+                domain = createDomain(Fs.dirname(path), props.domain);
+
+            attrs.domain = domain;
+            attrs.path = path;
+
             deleteHost();
 
             console.log('deleted sucessfully')
