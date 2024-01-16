@@ -4,42 +4,54 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
 const program = new commander_1.Command();
 const utilities_1 = require("@timeax/utilities");
-const files = {
-    hosts: 'C:/Windows/System32/drivers/etc/hosts',
-    xampp: "C:/xampp/apache/conf/extra/httpd-vhosts.conf",
-    v3: "C:/xampp/apache/v3.ext"
-};
 const attrs = {
     domain: '',
     path: ''
 };
+const manager = {
+    _hosts: 'C:/Windows/System32/drivers/etc/hosts',
+    _xampp: "C:/xampp/apache/conf/extra/httpd-vhosts.conf",
+    get hosts() {
+        return utilities_1.Fs.content(this.hosts) || '';
+    },
+    get xampp() {
+        return utilities_1.Fs.content(this.xampp) || '';
+    },
+    set hosts(value) {
+        utilities_1.Fs.writeSync(this.hosts, value);
+    },
+    set xampp(value) {
+        utilities_1.Fs.writeSync(this.xampp, value);
+    }
+};
 function write() {
-    writeVHost(files.xampp);
-    addHost(files.hosts);
+    writeVHost();
+    addHost();
     console.log('Created successfully');
 }
 function createId(end = false) {
     return `## domain: ${attrs.domain}----${end ? '####' : ''}`;
 }
-function writeVHost(file) {
-    let content = utilities_1.Fs.content(file) || '';
+function writeVHost() {
+    let content = manager.hosts;
     const id = createId();
     //---
     if (!content?.includes(id)) {
         content += append(createVirtualHost());
-        utilities_1.Fs.writeSync(file, content);
+        manager.hosts = content;
+        console.log(content);
     }
     else
         console.log('Virtual host already exists');
 }
-function addHost(file) {
-    let content = utilities_1.Fs.content(file) || '';
+function addHost() {
+    let content = manager.xampp;
     const id = createId();
     //---
     if (!content?.includes(id)) {
         content += append(`127.0.0.1    ${attrs.domain}`);
-        utilities_1.Fs.writeSync(file, content);
-        console.log('Written to path: ' + file);
+        manager.xampp = content;
+        console.log('Written to path: ' + manager._xampp);
         console.log('Content: ' + content);
     }
     else
@@ -62,7 +74,7 @@ function append(content) {
 function deleteHost() {
     let id = createId();
     let idEnd = createId(true);
-    const list = [files.hosts, files.xampp];
+    const list = [manager._hosts, manager._xampp];
     list.forEach(item => {
         let content = utilities_1.Fs.content(item);
         const [start, end] = [content.indexOf(id), content.indexOf(idEnd)];
@@ -80,22 +92,56 @@ function createDomain(name, domain) {
         return name;
     return name + '.test';
 }
-program
-    .name('valet')
-    .version('0.0.1')
-    .description('Valet for Windows');
-program
-    .command('start')
-    .description('Start Program')
-    .option('-d, --domain <domainName>')
-    .option('-p, --path <filepath>')
-    .action((props) => {
-    let path = props.path || process.cwd(), domain = createDomain(utilities_1.Fs.dirname(path), props.domain);
-    // write(domain);
+function set(domain, path) {
     attrs.domain = domain;
     attrs.path = path;
+}
+function install(props) {
+    // write(domain);
+    let path = props.path || process.cwd();
+    set(createDomain(utilities_1.Fs.dirname(path), props.domain), path);
     write();
-});
+}
+function update(props) {
+    let path = props.path || process.cwd();
+    set(createDomain(utilities_1.Fs.dirname(path), props.domain), path);
+    //---------
+    let id = createId();
+    let idEnd = createId(true);
+    const vhost = manager.hosts, xampp = manager.xampp;
+    [{ path: manager._hosts, content: vhost, name: 'hosts' }, { path: manager._xampp, content: xampp, name: 'xampp' }].forEach(({ content, path, name }) => {
+        if (content.includes(id)) {
+            const [start, end] = [content.indexOf(id), content.indexOf(idEnd)];
+            const scrape = content.slice(start - id.length, end);
+            //--------
+            manager[name] = content.replace(scrape, append(name === 'hosts' ? createVirtualHost() : `127.0.0.1    ${attrs.domain}`));
+        }
+        else
+            install(props);
+    });
+}
+program
+    .name('hs')
+    .version('0.0.2')
+    .description('Valet for Windows');
+program
+    .command('install')
+    .description('Install a local domain on your system')
+    .option('-d, --domain <domainName>')
+    .option('-p, --path <filepath>')
+    .action(install);
+program
+    .command('update')
+    .description('update a local domain on your system')
+    .option('-d, --domain <domainName>')
+    .option('-p, --path <filepath>')
+    .action(update);
+program
+    .command('i')
+    .description('Install a local domain on your system')
+    .option('-d, --domain <domainName>')
+    .option('-p, --path <filepath>')
+    .action(install);
 program
     .command('del')
     .description('Deletes virtual host')
