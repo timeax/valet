@@ -15,11 +15,11 @@ const manager = {
     _hosts: 'C:/Windows/System32/drivers/etc/hosts',
     _xampp: "C:/xampp/apache/conf/extra/httpd-vhosts.conf",
     get hosts() {
-        return Fs.content(this.hosts) || '';
+        return Fs.content(this._hosts) || '';
     },
 
     get xampp() {
-        return Fs.content(this.xampp) || ''
+        return Fs.content(this._xampp) || ''
     },
 
     set hosts(value: string) {

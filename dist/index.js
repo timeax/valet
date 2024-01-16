@@ -12,10 +12,10 @@ const manager = {
     _hosts: 'C:/Windows/System32/drivers/etc/hosts',
     _xampp: "C:/xampp/apache/conf/extra/httpd-vhosts.conf",
     get hosts() {
-        return utilities_1.Fs.content(this.hosts) || '';
+        return utilities_1.Fs.content(this._hosts) || '';
     },
     get xampp() {
-        return utilities_1.Fs.content(this.xampp) || '';
+        return utilities_1.Fs.content(this._xampp) || '';
     },
     set hosts(value) {
         utilities_1.Fs.writeSync(this.hosts, value);
