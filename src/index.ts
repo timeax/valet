@@ -2,7 +2,6 @@
 
 import { Command } from 'commander';
 const program = new Command();
-
 import { Fs } from "@timeax/utilities"
 
 
@@ -13,20 +12,20 @@ const attrs = {
 
 const manager = {
     _hosts: 'C:/Windows/System32/drivers/etc/hosts',
-    _xampp: "C:/xampp/apache/conf/extra/httpd-vhosts.conf",
+    _vhosts: "C:/xampp/apache/conf/extra/httpd-vhosts.conf",
     get hosts() {
         return Fs.content(this._hosts) || '';
     },
 
-    get xampp() {
-        return Fs.content(this._xampp) || ''
+    get vhosts() {
+        return Fs.content(this._vhosts) || ''
     },
 
     set hosts(value: string) {
-        Fs.writeSync(this.hosts, value);
+        Fs.writeSync(this._hosts, value);
     },
-    set xampp(value: string) {
-        Fs.writeSync(this.xampp, value);
+    set vhosts(value: string) {
+        Fs.writeSync(this._vhosts, value);
     }
 }
 
@@ -37,17 +36,24 @@ function write() {
     console.log('Created successfully')
 }
 
-function createId(end: boolean = false) {
-    return `## domain: ${attrs.domain}----${end ? '####' : ''}`;
+function createId() {
+    let id = `## domain: ${attrs.domain}----`;
+
+    return {
+        start: id,
+        end: id + '####'
+    }
 }
 
 function writeVHost() {
-    let content = manager.hosts;
-    const id = createId();
+    let content = manager.vhosts;
+    const { start: id } = createId();
+
+    console.log(content)
     //---
     if (!content?.includes(id)) {
         content += append(createVirtualHost());
-        manager.hosts = content;
+        manager.vhosts = content;
 
         console.log(content);
     }
@@ -55,15 +61,15 @@ function writeVHost() {
     else console.log('Virtual host already exists')
 }
 function addHost() {
-    let content = manager.xampp;
+    let content = manager.hosts;
     const id = createId();
     //---
-    if (!content?.includes(id)) {
+    if (!content?.includes(id.start)) {
         content += append(`127.0.0.1    ${attrs.domain}`);
 
-        manager.xampp = content;
+        manager.hosts = content;
 
-        console.log('Written to path: ' + manager._xampp)
+        console.log('Written to path: ' + manager._hosts)
         console.log('Content: ' + content)
     }
 
@@ -84,21 +90,21 @@ function createVirtualHost() {
 }
 
 function append(content: string) {
-    return `\n\n${createId()}\n${content}\n${createId(true)}`
+    const id = createId()
+    return `\n\n${id.start}\n${content}\n${id.end}`
 }
 
 function deleteHost() {
-    let id = createId();
-    let idEnd = createId(true);
-    const list = [manager._hosts, manager._xampp];
+    let { start: id, end: idEnd } = createId();
+    const list = [manager._hosts, manager._vhosts];
 
     list.forEach(item => {
         let content = Fs.content(item);
         const [start, end] = [content.indexOf(id), content.indexOf(idEnd)];
 
         if (start > -1 && end > start) {
-            console.log('Deleted content: ' + content.slice(start - id.length, end))
-            content = content.replace(content.slice(start - id.length, end), '');
+            console.log('Deleted content: ' + content.slice(start, end + idEnd.length))
+            content = content.replace(content.slice(start, end + idEnd.length), '');
             Fs.writeSync(item, content)
         }
     })
@@ -127,25 +133,101 @@ function update(props) {
     let path = props.path || process.cwd();
     set(createDomain(Fs.dirname(path), props.domain), path);
     //---------
-    let id = createId();
-    let idEnd = createId(true);
+    let { start: id, end: idEnd } = createId();
 
-    const vhost = manager.hosts, xampp = manager.xampp;
+    const host = manager.hosts, vhosts = manager.vhosts;
 
-    ([{ path: manager._hosts, content: vhost, name: 'hosts' }, { path: manager._xampp, content: xampp, name: 'xampp' }] as const).forEach(({ content, path, name }) => {
+    ([{ path: manager._hosts, content: host, name: 'hosts' }, { path: manager._vhosts, content: vhosts, name: 'vhosts' }] as const).forEach(({ content, path, name }) => {
         if (content.includes(id)) {
-            const [start, end] = [content.indexOf(id), content.indexOf(idEnd)];
-            const scrape = content.slice(start - id.length, end);
+            const [start, end] = [content.indexOf(id), content.indexOf(idEnd) + idEnd.length];
+            const scrape = content.slice(start, end);
             //--------
-            manager[name] = content.replace(scrape, append(name === 'hosts' ? createVirtualHost() : `127.0.0.1    ${attrs.domain}`))
+            manager[name] = content.replace(scrape, append(name === 'vhosts' ? createVirtualHost() : `127.0.0.1    ${attrs.domain}`))
         } else install(props);
     });
+}
+
+
+function listDomains(props: ListDomains) {
+    if (props.f) {
+
+    }
+
+    if (props.m) {
+
+    }
+
+
+    const list: string[] = []
+
+
+    let { hosts, vhosts } = manager;
+
+    let matches = vhosts.match(/\#\#\s+?domain:\s+?[^\n]*---(-(?!\#))/gm);
+
+    let domains: { [x: string]: DomainProps } = {}
+
+    if (Array.isArray(matches)) {
+        matches.forEach(item => {
+            const name = item.match(/(?<=(\#\#\sdomain:))\s([^\s]*(?=(----)))/gm)?.[0]?.trim();
+            if (name) {
+                attrs.domain = name;
+                const { start: id, end: closingID } = createId()
+                //---
+                const content = vhosts.slice(vhosts.indexOf(id), vhosts.indexOf(closingID) + closingID.length);
+                const { alias, directory, serverPort, dns, } =
+                    extract(
+                        hosts.indexOf(id) > -1 ? hosts.slice(hosts.indexOf(id) + id.length, hosts.indexOf(closingID)) : '', content,
+                        name
+                    )
+
+                domains[name] = {
+                    alias,
+                    directory,
+                    serverPort,
+                    dns
+                }
+            }
+        });
+
+        const table = Object.keys(domains).map(item => {
+            return {
+                Name: item,
+                ServerAlias: domains[item].alias,
+                Directory: domains[item].directory,
+                DNS: domains[item].dns,
+                Port: domains[item].serverPort
+            }
+        });
+        console.log('\n\nList Of Installed Domains')
+        console.table(table);
+    }
+}
+
+interface DomainProps {
+    directory: string;
+    alias: string;
+    serverPort: string;
+    dns: string
+}
+
+interface ListDomains {
+    f?: string;
+    m?: string
 }
 
 program
     .name('hs')
     .version('0.0.2')
     .description('Valet for Windows');
+
+program
+    .command('list')
+    .description('Get a full list of a installed domains')
+    .option('-f, --format')
+    .option('-m, --modify')
+    .action(listDomains)
+
 
 program
     .command('install')
@@ -187,3 +269,20 @@ program
     })
 
 program.parse(process.argv);
+
+function extract(hosts: string, content: string, name: string): { alias: any; directory: any; serverPort: any; dns: any; } {
+    let port = content.match(/<VirtualHost\s+?[^\>]*>/gm)?.[0];
+
+    if (port) port = port.replace(/<VirtualHost\s+?/gm, '').replace('>', '');
+    let alias = content.match(/ServerAlias\s+[^\n]*/gm)?.[0];
+
+    if (alias) alias = alias.replace(/ServerAlias\s+?/, '')?.trim();
+
+    let path = content.match(/DocumentRoot\s+[^\n]*/gm)?.[0];
+    if (path) path = path.replace(/DocumentRoot\s+?[^"]*"/gm, '').replace('"', '').trim()
+
+    let dns = hosts.replace(new RegExp(`\\s+?${name}[^\n]*`), '')?.trim();
+
+    return { alias, directory: path, serverPort: port, dns }
+}
+
