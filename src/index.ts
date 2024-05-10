@@ -1,84 +1,91 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander';
-const program = new Command();
-import { Fs } from "@timeax/utilities"
+import { exec } from "child_process";
 
+import { Command } from "commander";
+const program = new Command();
+import { Fs } from "@timeax/utilities";
+import color from "./color";
+
+function restartServer() {
+   exec('httpd -k restart -n "Apache2.4"', (err) => {
+      if (err) return console.log(err.message);
+      console.log("Apache restarted");
+   });
+}
 
 const attrs = {
-    domain: '',
-    path: ''
-}
+   domain: "",
+   path: "",
+};
 
 const manager = {
-    _hosts: 'C:/Windows/System32/drivers/etc/hosts',
-    _vhosts: "C:/xampp/apache/conf/extra/httpd-vhosts.conf",
-    get hosts() {
-        return Fs.content(this._hosts) || '';
-    },
+   _hosts: "C:/Windows/System32/drivers/etc/hosts",
+   _vhosts: "D:/xampp/apache/conf/extra/httpd-vhosts.conf",
+   get hosts() {
+      return Fs.content(this._hosts) || "";
+   },
 
-    get vhosts() {
-        return Fs.content(this._vhosts) || ''
-    },
+   get vhosts() {
+      return Fs.content(this._vhosts) || "";
+   },
 
-    set hosts(value: string) {
-        Fs.writeSync(this._hosts, value);
-    },
-    set vhosts(value: string) {
-        Fs.writeSync(this._vhosts, value);
-    }
-}
+   set hosts(value: string) {
+      Fs.writeSync(this._hosts, value);
+   },
+   set vhosts(value: string) {
+      Fs.writeSync(this._vhosts, value);
+   },
+};
+
+
+color(program);
 
 function write() {
-    writeVHost();
-    addHost();
+   writeVHost();
+   addHost();
 
-    console.log('Created successfully')
+   console.log("Created successfully");
 }
 
 function createId() {
-    let id = `## domain: ${attrs.domain}----`;
+   let id = `## domain: ${attrs.domain}----`;
 
-    return {
-        start: id,
-        end: id + '####'
-    }
+   return {
+      start: id,
+      end: id + "####",
+   };
 }
 
 function writeVHost() {
-    let content = manager.vhosts;
-    const { start: id } = createId();
+   let content = manager.vhosts;
+   const { start: id } = createId();
 
-    console.log(content)
-    //---
-    if (!content?.includes(id)) {
-        content += append(createVirtualHost());
-        manager.vhosts = content;
+   console.log(content);
+   //---
+   if (!content?.includes(id)) {
+      content += append(createVirtualHost());
+      manager.vhosts = content;
 
-        console.log(content);
-    }
-
-    else console.log('Virtual host already exists')
+      console.log(content);
+   } else console.log("Virtual host already exists");
 }
 function addHost() {
-    let content = manager.hosts;
-    const id = createId();
-    //---
-    if (!content?.includes(id.start)) {
-        content += append(`127.0.0.1    ${attrs.domain}`);
+   let content = manager.hosts;
+   const id = createId();
+   //---
+   if (!content?.includes(id.start)) {
+      content += append(`127.0.0.1    ${attrs.domain}`);
 
-        manager.hosts = content;
+      manager.hosts = content;
 
-        console.log('Written to path: ' + manager._hosts)
-        console.log('Content: ' + content)
-    }
-
-    else console.log('Virtual host already exists')
+      console.log("Written to path: " + manager._hosts);
+      console.log("Content: " + content);
+   } else console.log("Virtual host already exists");
 }
 
-
 function createVirtualHost() {
-    return `<VirtualHost *:80>
+   return `<VirtualHost ${attrs.domain}>
     DocumentRoot "${attrs.path}"
     ServerName ${attrs.domain}
     ServerAlias *.${attrs.domain}
@@ -86,203 +93,363 @@ function createVirtualHost() {
     <Directory "${attrs.path}">
         Require local
     </Directory>
-</VirtualHost>`
+</VirtualHost>`;
 }
 
 function append(content: string) {
-    const id = createId()
-    return `\n\n${id.start}\n${content}\n${id.end}`
+   const id = createId();
+   return `\n\n${id.start}\n${content}\n${id.end}`;
 }
 
 function deleteHost() {
-    let { start: id, end: idEnd } = createId();
-    const list = [manager._hosts, manager._vhosts];
+   let { start: id, end: idEnd } = createId();
+   const list = [manager._hosts, manager._vhosts];
 
-    list.forEach(item => {
-        let content = Fs.content(item);
-        const [start, end] = [content.indexOf(id), content.indexOf(idEnd)];
+   list.forEach((item) => {
+      let content = Fs.content(item);
+      const a = new RegExp(id),
+         b = new RegExp(idEnd);
 
-        if (start > -1 && end > start) {
-            console.log('Deleted content: ' + content.slice(start, end + idEnd.length))
-            content = content.replace(content.slice(start, end + idEnd.length), '');
-            Fs.writeSync(item, content)
-        }
-    })
+      console.log(a.exec(content), id);
+
+      const [start, end] = [a.exec(content).index, b.exec(content).index];
+
+      if (start > -1 && end > start) {
+         console.log(
+            "Deleted content: " + content.slice(start, end + idEnd.length)
+         );
+         content = content.replace(
+            content.slice(start, end + idEnd.length),
+            ""
+         );
+         Fs.writeSync(item, content);
+      }
+   });
 }
 
 function createDomain(name: string, domain?: string) {
-    if (domain) return domain;
-    if (name.match(/^(?:https?:\/\/)?(?:[^.]+\.)?example\.com(\/.*)?$/)) return name;
-    return name + '.test';
+   if (domain) return domain;
+   if (name.match(/^(?:https?:\/\/)?(?:[^.]+\.)?example\.com(\/.*)?$/))
+      return name;
+   return name + ".test";
 }
 
 function set(domain: string, path: string) {
-    attrs.domain = domain;
-    attrs.path = path;
+   attrs.domain = domain;
+   attrs.path = path;
 }
 
 function install(props) {
-    // write(domain);
-    let path = props.path || process.cwd();
-    set(createDomain(Fs.dirname(path), props.domain), path);
+   // write(domain);
+   let path = props.path || process.cwd();
+   set(createDomain(Fs.dirname(path), props.domain), path);
 
-    write()
+   write();
+   restartServer();
 }
 
 function update(props) {
-    let path = props.path || process.cwd();
-    set(createDomain(Fs.dirname(path), props.domain), path);
-    //---------
-    let { start: id, end: idEnd } = createId();
+   let path = props.path || process.cwd();
+   set(createDomain(Fs.dirname(path), props.domain), path);
+   //---------
+   let { start: id, end: idEnd } = createId();
 
-    const host = manager.hosts, vhosts = manager.vhosts;
+   const host = manager.hosts,
+      vhosts = manager.vhosts;
 
-    ([{ path: manager._hosts, content: host, name: 'hosts' }, { path: manager._vhosts, content: vhosts, name: 'vhosts' }] as const).forEach(({ content, path, name }) => {
-        if (content.includes(id)) {
-            const [start, end] = [content.indexOf(id), content.indexOf(idEnd) + idEnd.length];
-            const scrape = content.slice(start, end);
-            //--------
-            manager[name] = content.replace(scrape, append(name === 'vhosts' ? createVirtualHost() : `127.0.0.1    ${attrs.domain}`))
-        } else install(props);
-    });
+   (
+      [
+         { path: manager._hosts, content: host, name: "hosts" },
+         { path: manager._vhosts, content: vhosts, name: "vhosts" },
+      ] as const
+   ).forEach(({ content, path, name }) => {
+      if (content.includes(id)) {
+         const [start, end] = [
+            content.indexOf(id),
+            content.indexOf(idEnd) + idEnd.length,
+         ];
+         const scrape = content.slice(start, end);
+         //--------
+         manager[name] = content.replace(
+            scrape,
+            append(
+               name === "vhosts"
+                  ? createVirtualHost()
+                  : `127.0.0.1    ${attrs.domain}`
+            )
+         );
+      } else install(props);
+   });
+   restartServer();
 }
 
+function del(props: { domain: string[]; path: string }) {
+   if (props) {
+      let path = props.path || process.cwd(),
+         domain = createDomain(Fs.name(path), props.domain.join(" "));
 
-function listDomains(props: ListDomains) {
-    if (props.f) {
+      attrs.domain = domain;
+      attrs.path = path;
 
-    }
+      deleteHost();
+      restartServer();
 
-    if (props.m) {
+      console.log("deleted sucessfully");
+   }
+}
 
-    }
+function parse(num: string[]) {
+   return num
+      .map((item) => parseInt(item.trim()))
+      .filter((item) => typeof item == "number");
+}
 
+function getNumbers(num: string) {
+   num = num.trim();
+   if (num.includes(",")) {
+      return parse(num.split(","));
+   }
 
-    const list: string[] = []
+   return parse([num]);
+}
 
+interface Modify {
+   domain: string;
+   path: string;
+   dns: string;
+   port: string;
+   alias: string;
+}
 
-    let { hosts, vhosts } = manager;
+async function listDomains(props: ListDomains) {
+   const {
+      default: { prompt },
+   } = await import("inquirer");
+   let deleteIndex: number[] = [];
+   let formatIndex: number[] = [];
 
-    let matches = vhosts.match(/\#\#\s+?domain:\s+?[^\n]*---(-(?!\#))/gm);
+   if (props.remove)
+      props.remove.forEach((item) => deleteIndex.push(...getNumbers(item)));
+   if (props.format)
+      props.format.forEach((item) => formatIndex.push(...getNumbers(item)));
 
-    let domains: { [x: string]: DomainProps } = {}
+   let table = getTable();
+   if (table) {
+      if (formatIndex.length > 0) {
+         for (let item of formatIndex) {
+            if (item < 0) item = table.length + item;
+            //-----------
+            const row = table[item];
+            if (!row) continue;
+            const modal = await prompt([
+               {
+                  name: "modify",
+                  message: `Are you sure you want to modify ${row.Name} in ${row.Directory}`,
+                  type: "confirm",
+               },
+            ]);
 
-    if (Array.isArray(matches)) {
-        matches.forEach(item => {
-            const name = item.match(/(?<=(\#\#\sdomain:))\s([^\s]*(?=(----)))/gm)?.[0]?.trim();
-            if (name) {
-                attrs.domain = name;
-                const { start: id, end: closingID } = createId()
-                //---
-                const content = vhosts.slice(vhosts.indexOf(id), vhosts.indexOf(closingID) + closingID.length);
-                const { alias, directory, serverPort, dns, } =
-                    extract(
-                        hosts.indexOf(id) > -1 ? hosts.slice(hosts.indexOf(id) + id.length, hosts.indexOf(closingID)) : '', content,
-                        name
-                    )
+            if (modal.modify) {
+               const modal: Modify = await prompt([
+                  {
+                     name: "domain",
+                     message: `Enter Domain name`,
+                     type: "input",
+                     default: row.Name,
+                  },
 
-                domains[name] = {
-                    alias,
-                    directory,
-                    serverPort,
-                    dns
-                }
+                  {
+                     name: "alias",
+                     message: `Enter Server Alias`,
+                     type: "input",
+                     default: row.ServerAlias,
+                  },
+
+                  {
+                     name: "path",
+                     message: `Root Directory (relative paths are valid)`,
+                     type: "input",
+                     default: row.Directory,
+                  },
+                  {
+                     name: "dns",
+                     message: `Enter new DNS`,
+                     type: "input",
+                     default: row.DNS,
+                  },
+
+                  {
+                     name: "port",
+                     message: `Enter Port`,
+                     type: "input",
+                     default: row.Port,
+                  },
+               ]);
+
+               modify(modal);
+               table = getTable();
             }
-        });
+         }
+      }
 
-        const table = Object.keys(domains).map(item => {
-            return {
-                Name: item,
-                ServerAlias: domains[item].alias,
-                Directory: domains[item].directory,
-                DNS: domains[item].dns,
-                Port: domains[item].serverPort
-            }
-        });
-        console.log('\n\nList Of Installed Domains')
-        console.table(table);
-    }
+      if (deleteIndex.length > 0) {
+         for (let item of deleteIndex) {
+            if (item < 0) item = table.length + item;
+
+            const row = table[item];
+            if (!row) continue;
+            const modal = await prompt([
+               {
+                  name: "delete",
+                  message: `Are you sure you want to delete ${row.Name} in ${row.Directory}`,
+                  type: "confirm",
+               },
+            ]);
+
+            if (modal.delete) del({ domain: [row.Name], path: row.Directory });
+         }
+         table = getTable();
+      }
+
+      console.log("\n\nList Of Installed Domains");
+      console.table(table);
+   } else console.log("No records found");
+
+   console.log(`\nSee hosts file at -> ${manager._hosts}`);
+   console.log(`\nSee vhosts file at -> ${manager._vhosts}`);
 }
 
 interface DomainProps {
-    directory: string;
-    alias: string;
-    serverPort: string;
-    dns: string
+   directory: string;
+   alias: string;
+   serverPort: string;
+   dns: string;
 }
 
 interface ListDomains {
-    f?: string;
-    m?: string
+   format?: string[];
+   remove?: string[];
 }
 
-program
-    .name('hs')
-    .version('0.0.2')
-    .description('Valet for Windows');
+program.name("web").version("0.0.2").description("Web Development Utility CMD Interface");
 
 program
-    .command('list')
-    .description('Get a full list of a installed domains')
-    .option('-f, --format')
-    .option('-m, --modify')
-    .action(listDomains)
-
-
-program
-    .command('install')
-    .description('Install a local domain on your system')
-    .option('-d, --domain <domainName>')
-    .option('-p, --path <filepath>')
-    .action(install);
+   .command("list")
+   .description("Get a full list of a installed domains")
+   .option("-f, --format <id...>")
+   .option("-rm, --remove <id...>")
+   .action(listDomains);
 
 program
-    .command('update')
-    .description('update a local domain on your system')
-    .option('-d, --domain <domainName>')
-    .option('-p, --path <filepath>')
-    .action(update);
+   .command("l")
+   .description("Get a full list of a installed domains")
+   .option("-f, --format <id...>")
+   .option("-rm, --remove <id...>")
+   .action(listDomains);
 
 program
-    .command('i')
-    .description('Install a local domain on your system')
-    .option('-d, --domain <domainName>')
-    .option('-p, --path <filepath>')
-    .action(install);
+   .command("install")
+   .description("Install a local domain on your system")
+   .option("-d, --domain <domainName>")
+   .option("-p, --path <filepath>")
+   .action(install);
 
 program
-    .command('del')
-    .description('Deletes virtual host')
-    .option('-d, --domain <domain>', '-p, --path <path>')
-    .action((props) => {
-        if (props) {
-            let path = props.path || process.cwd(),
-                domain = createDomain(Fs.dirname(path), props.domain);
+   .command("update")
+   .description("update a local domain on your system")
+   .option("-d, --domain <domainName>")
+   .option("-p, --path <filepath>")
+   .action(update);
 
-            attrs.domain = domain;
-            attrs.path = path;
+program
+   .command("i")
+   .description("Install a local domain on your system")
+   .option("-d, --domain <domainName>")
+   .option("-p, --path <filepath>")
+   .action(install);
 
-            deleteHost();
-
-            console.log('deleted sucessfully')
-        }
-    })
+program
+   .command("del")
+   .description("Deletes virtual host")
+   .option("-d, --domain <domain...>", "-p, --path <path>")
+   .action(del);
 
 program.parse(process.argv);
 
-function extract(hosts: string, content: string, name: string): { alias: any; directory: any; serverPort: any; dns: any; } {
-    let port = content.match(/<VirtualHost\s+?[^\>]*>/gm)?.[0];
+function extract(
+   hosts: string,
+   content: string,
+   name: string
+): { alias: any; directory: any; serverPort: any; dns: any } {
+   let port = content.match(/<VirtualHost\s+?[^\>]*>/gm)?.[0];
 
-    if (port) port = port.replace(/<VirtualHost\s+?/gm, '').replace('>', '');
-    let alias = content.match(/ServerAlias\s+[^\n]*/gm)?.[0];
+   if (port) port = port.replace(/<VirtualHost\s+?/gm, "").replace(">", "");
+   let alias = content.match(/ServerAlias\s+[^\n]*/gm)?.[0];
 
-    if (alias) alias = alias.replace(/ServerAlias\s+?/, '')?.trim();
+   if (alias) alias = alias.replace(/ServerAlias\s+?/, "")?.trim();
 
-    let path = content.match(/DocumentRoot\s+[^\n]*/gm)?.[0];
-    if (path) path = path.replace(/DocumentRoot\s+?[^"]*"/gm, '').replace('"', '').trim()
+   let path = content.match(/DocumentRoot\s+[^\n]*/gm)?.[0];
+   if (path)
+      path = path
+         .replace(/DocumentRoot\s+?[^"]*"/gm, "")
+         .replace('"', "")
+         .trim();
 
-    let dns = hosts.replace(new RegExp(`\\s+?${name}[^\n]*`), '')?.trim();
+   let dns = hosts.replace(new RegExp(`\\s+?${name}[^\n]*`), "")?.trim();
 
-    return { alias, directory: path, serverPort: port, dns }
+   return { alias, directory: path, serverPort: port, dns };
+}
+function modify(modal: Modify) {
+   // throw new Error("Function not implemented.");
+}
+function getTable() {
+   let { hosts, vhosts } = manager;
+
+   let matches = vhosts.match(/\#\#\s+?domain:\s+?[^\n]*---(-(?!\#))/gm);
+
+   let domains: { [x: string]: DomainProps } = {};
+   if (Array.isArray(matches)) {
+      matches.forEach((item) => {
+         const name = item
+            .match(/(?<=(\#\#\sdomain:))\s([^\n]*(?=(----)))/gm)?.[0]
+            ?.trim();
+         if (name) {
+            attrs.domain = name;
+            const { start: id, end: closingID } = createId();
+            //---
+            const content = vhosts.slice(
+               vhosts.indexOf(id),
+               vhosts.indexOf(closingID) + closingID.length
+            );
+            const { alias, directory, serverPort, dns } = extract(
+               hosts.indexOf(id) > -1
+                  ? hosts.slice(
+                       hosts.indexOf(id) + id.length,
+                       hosts.indexOf(closingID)
+                    )
+                  : "",
+               content,
+               name
+            );
+            domains[name] = {
+               alias,
+               directory,
+               serverPort,
+               dns,
+            };
+         }
+      });
+
+      return Object.keys(domains).map((item) => {
+         return {
+            Name: item,
+            ServerAlias: domains[item].alias,
+            Directory: domains[item].directory,
+            DNS: domains[item].dns,
+            Port: domains[item].serverPort,
+            Url: `http://${item}/`,
+         };
+      });
+   }
 }
 

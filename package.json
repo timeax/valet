@@ -5,16 +5,22 @@
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {
-    "start": "cd src && tsc -w"
+    "start": "cd src && tsc -w",
+    "build": "rm -r dist && cd src && tsc -b",
+    "test": "valet colors ./sass/_colors.scss --watch=true"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@timeax/utilities": "^1.1.1",
-    "commander": "^11.1.0"
+    "color-parse": "^2.0.2",
+    "commander": "^11.1.0",
+    "inquirer": "^9.2.20",
+    "sass": "^1.77.0"
   },
   "devDependencies": {
+    "@types/inquirer": "^9.0.7",
     "@types/node": "^20.10.6"
   }
 }

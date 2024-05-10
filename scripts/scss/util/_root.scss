@@ -1,0 +1,28 @@
+
+@function is-map($var){
+   @return type-of($var) == 'map';
+ }
+ 
+ @mixin create-vars($value, $baseName: null, $prefix: '--') {
+     @if is-map($value) {
+         @each $name, $value in $value {
+             $var-name: "";
+             @if str-index($baseName, $prefix) {
+                 $var-name: #{$baseName}-#{$name};
+             } @else {
+                 $var-name: #{$prefix}-#{$name};   
+             }
+             
+             @if is-map($value) {
+                 @include create-vars($value, $var-name);
+             } @else {
+                 #{$var-name}: $value;
+             }
+         }
+     } @else if $baseName {
+         #{$var-name}: $value;
+     }
+ }
+
+ 
+ 
