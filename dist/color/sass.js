@@ -234,9 +234,12 @@ async function scss(to, colors, useRoots) {
                 const { space } = await parse(realVal);
                 const value = useRoots
                     ? `${space}(var(--color-${item}${name}));`
-                    : realVal;
+                    : realVal + ";";
                 //-------
                 list.push(`${colorName}${name}: ${value}`);
+                if (useRoots) {
+                    list.push(`rc-${item}${name}: ${realVal};`);
+                }
             }
         }
     }
