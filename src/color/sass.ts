@@ -295,7 +295,7 @@ async function scss(
             list.push(`${colorName}${name}: ${value}`);
 
             if (useRoots) {
-               list.push(`rc-${item}${name}: ${realVal};`);
+               list.push(`$rc-${item}${name}: var(--color-${item}${name});`);
             }
          }
       }
