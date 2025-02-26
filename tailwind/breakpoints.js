@@ -1,0 +1,1 @@
+module.exports = {"2xs":"1440px"}

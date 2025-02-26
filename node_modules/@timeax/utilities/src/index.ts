@@ -292,7 +292,7 @@ export namespace Fs {
         fs.writeFile(path, text, method)
     }
 
-    export function writeSync(path: string, data: any = '') {
+    export async function writeSync(path: string, data: any = '') {
         path = format(path);
         fs.writeFileSync(path, data);
     }
@@ -303,6 +303,15 @@ export namespace Fs {
 
     export function deleteFile(path: string) {
         fs.unlinkSync(path);
+    }
+
+    export function isRelative(path: string) {
+        path = format(path);
+        return ['../', './', '/'].some(item => path.startsWith(item));
+    }
+
+    export function fPath(path: string, cwd = __dirname) {
+        return isRelative(path) ? Fs.join(cwd, path) : path
     }
 
     export function deleteFolder(link: string) {
@@ -336,7 +345,7 @@ export namespace Fs {
      * 
      * @returns true if sucessful
      */
-    export function createPath(base: string, options: PathOptions = {}) {
+    export async function createPath(base: string, options: PathOptions = {}) {
         let ignore = options?.ignore;
         //--
         base = format(base);
@@ -352,13 +361,13 @@ export namespace Fs {
                 }
             } else {
                 if (!options?.ignore) options.ignore = true;
-                createPath(dirname, options);
+                await createPath(dirname, options);
             }
         }
 
         if (options.content && !options.ignore) options.callack
             ? write(base, options.content, options.callack)
-            : writeSync(base, options.content);
+            : await writeSync(base, options.content);
 
         return exists(base);
     }
@@ -427,37 +436,37 @@ export class Default {
 }
 
 
- // var result = '';
-        // // Strip off the other directories from where the files share a place of storage
-        // basePath = format(basePath);
-        // path = format(path);
-        // const arr1 = basePath.split('/');
-        // const arr2 = path.split('/');
-        // const arr3 = basePath.split('/');
-        // const arr4 = path.split('/');
-        // var size = arr1.length < arr2.length ? arr2.length : arr1.length;
-        // // ===========
-        // for (let i = 0; i < size; i++) {
-        //     var temp1 = arr3[i];
-        //     var temp2 = arr4[i];
-        //     if (temp1 === temp2) {
-        //         arr2.shift();
-        //         arr1.shift();
-        //     }
-        //     else break;
-        // }
-        // let len = arr1.length;
-        // let dots = '';
-        // let pathB = arr2.join('/');
-        // if (len > 1) {
-        //     // console.log(len);
-        //     const size = len - 1;
-        //     for (let i = 0; i < size; i++) {
-        //         dots += '../';
-        //     }
-        //     result = dots + pathB;
-        // }
-        // else result = pathB;
+// var result = '';
+// // Strip off the other directories from where the files share a place of storage
+// basePath = format(basePath);
+// path = format(path);
+// const arr1 = basePath.split('/');
+// const arr2 = path.split('/');
+// const arr3 = basePath.split('/');
+// const arr4 = path.split('/');
+// var size = arr1.length < arr2.length ? arr2.length : arr1.length;
+// // ===========
+// for (let i = 0; i < size; i++) {
+//     var temp1 = arr3[i];
+//     var temp2 = arr4[i];
+//     if (temp1 === temp2) {
+//         arr2.shift();
+//         arr1.shift();
+//     }
+//     else break;
+// }
+// let len = arr1.length;
+// let dots = '';
+// let pathB = arr2.join('/');
+// if (len > 1) {
+//     // console.log(len);
+//     const size = len - 1;
+//     for (let i = 0; i < size; i++) {
+//         dots += '../';
+//     }
+//     result = dots + pathB;
+// }
+// else result = pathB;
 
-        // // ============
-        // return result;
+// // ============
+// return result;

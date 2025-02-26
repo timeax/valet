@@ -6,6 +6,7 @@ import { Command } from "commander";
 const program = new Command();
 import { Fs } from "@timeax/utilities";
 import color from "./color";
+import { mediaQuery } from "./media";
 
 function restartServer() {
    exec('httpd -k restart -n "Apache2.4"', (err) => {
@@ -331,7 +332,10 @@ interface ListDomains {
    remove?: string[];
 }
 
+
 program.name("web").version("0.0.2").description("Web Development Utility CMD Interface");
+
+mediaQuery(program);
 
 program
    .command("list")
@@ -424,9 +428,9 @@ function getTable() {
             const { alias, directory, serverPort, dns } = extract(
                hosts.indexOf(id) > -1
                   ? hosts.slice(
-                       hosts.indexOf(id) + id.length,
-                       hosts.indexOf(closingID)
-                    )
+                     hosts.indexOf(id) + id.length,
+                     hosts.indexOf(closingID)
+                  )
                   : "",
                content,
                name

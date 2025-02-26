@@ -1,5 +1,8 @@
 import { Fs } from "@timeax/utilities";
 
+const convert = import('@builtwithjavascript/oklch-converter');
+const con = import('color-convert');
+
 export function getString(code: string) {
    return `@function is-map($var){
       @return type-of($var) == 'map';
@@ -86,7 +89,16 @@ export function save(
 
 async function parse(value) {
    const { default: parse } = await import("color-parse");
-   return parse(value);
+
+   const convert = await import('@builtwithjavascript/oklch-converter');
+   const con = await import('color-convert');
+
+   const rgb = parse(value);
+
+   return rgb.values.join(', ')
+   // //@ts-ignore
+   // const hls = con.default.rgb.hsl(...rgb.values)
+   // return convert.useOklchConverter().hslToOklchString({ h: hls[0], l: hls[1], s: hls[2] })
 }
 
 export function toFigma(list) {
@@ -116,15 +128,14 @@ async function tailwind(
       if (Object.prototype.hasOwnProperty.call(colors, key)) {
          const color = colors[key];
          if (typeof color === "string") {
-            const { values, space } = await parse(color);
+            const values = await parse(color);
+            const space: any = 'oklch';
             if (useRoots)
-               tailwindColors[key] = `${space}(var(--color-${key}) ${
-                  space === "rgba" ? ", " : "/"
-               } <alpha-value>)`;
+               tailwindColors[key] = `${space}(var(--color-${key}) ${space === "rgba" ? ", " : "/"
+                  } <alpha-value>)`;
             else
-               tailwindColors[key] = `${space}(${values.join(",")} ${
-                  space === "rgba" ? ", " : "/"
-               } <alpha-value>)`;
+               tailwindColors[key] = `${space}(${values} ${space === "rgba" ? ", " : "/"
+                  } <alpha-value>)`;
          } else {
             tailwindColors[key] = {};
             for (const name in color) {
@@ -132,7 +143,8 @@ async function tailwind(
                   let value = color[name];
                   if (name === "default") continue;
 
-                  const { values, space } = await parse(value);
+                  const values = await parse(value);
+                  const space: any = 'oklch';
 
                   let propName =
                      name === "DEFAULT" ? `${key}` : `${key}-${name}`;
@@ -140,13 +152,10 @@ async function tailwind(
                   if (useRoots)
                      tailwindColors[key][
                         name
-                     ] = `${space}(var(--color-${propName}) ${
-                        space === "rgba" ? ", " : "/"
+                     ] = `${space}(var(--color-${propName}) ${space === "rgba" ? ", " : "/"
                      } <alpha-value>)`;
                   else
-                     tailwindColors[key][name] = `${space}(${values.join(
-                        ","
-                     )} ${space === "rgba" ? ", " : "/"} <alpha-value>)`;
+                     tailwindColors[key][name] = `${space}(${values} ${space === "rgba" ? ", " : "/"} <alpha-value>)`;
                }
             }
          }
@@ -154,7 +163,7 @@ async function tailwind(
    }
 
    const jsonString = JSON.stringify(tailwindColors);
-   const content = `const colors = ${jsonString}; \n\n module.exports = colors;`;
+   const content = `const colors = ${jsonString}; \n\n export default colors;`;
    // Fs.writeSync(to, content);
    Fs.createPath(to, { content });
 }
@@ -171,16 +180,16 @@ async function css(
       if (!(typeof value == "string" || typeof value == "number"))
          throw SyntaxError(
             "Error in code - cannot have a color shade on a shade at key - " +
-               key +
-               " " +
-               typeof value
+            key +
+            " " +
+            typeof value
          );
 
       const name = key === "default" ? "" : "-" + key;
       let realVal = colors[item][key];
       //--------
-      const { space } = await parse(realVal);
-      if (useRoots) value = `${space}(var(--color-${item}${name}))`;
+      const space = 'oklch';
+      if (useRoots) value = `var(--color-${item}${name})`;
       //---
       list.push(
          `.bg-${item}${name} { background-color: ${value} } .color-${item}${name} { color: ${value} }`
@@ -210,19 +219,20 @@ async function roots(
    useTailwind: boolean
 ) {
    const regex = new RegExp(/(--)[^\,\:\)]+:[^\;][^\n]+/, "gm");
-   const cssVars = new RegExp(":root[^{]*{[^}]*}", "gm");
+   const cssVars = new RegExp("@theme[^{]*{[^}]*}", "gm");
    const list = [];
    //---
    const run = async (value, key, item) => {
       value = useTailwind
          ? await (async () => {
-              const { values } = await parse(value);
-              return values.join(" ");
-           })()
+            const values = await parse(value);
+            // console.log(values)
+            return values;
+         })()
          : value;
       const name = key === "default" ? "" : "-" + key;
       //-------
-      list.push(`--color-${item}${name}: ${value};`);
+      list.push(`--color-${item}${name}: rgb(${value});`);
    };
 
    for (const item of Object.keys(colors)) {
@@ -239,9 +249,7 @@ async function roots(
    let content = Fs.content(to) || "";
    if (!content) {
       if (useTailwind) {
-         content = `@layer base {
-            :root {}
-          }`;
+         content = `@theme { }`;
       } else content = `:root {}`;
    }
 
@@ -249,14 +257,12 @@ async function roots(
 
    if (!vars) {
       if (useTailwind) {
-         content += `@layer base {
-            :root {}
-          }`;
+         content += `@theme {}`;
       } else content += `:root {}`;
       vars = cssVars.exec(content);
    }
 
-   const text = vars[0];
+   const text = vars?.[0] ?? '';
    //---------
    let match = text.match(regex) || [];
    //------
@@ -264,7 +270,7 @@ async function roots(
 
    roots.push(...list);
 
-   let edited = content.replace(text, `:root {\n${roots.join("\n\t")}\n}`);
+   let edited = text ? content?.replace(text, `@theme {\n${roots.join("\n\t")}\n}`) : (content += `@theme {\n${roots.join("\n\t")}\n}`);
    //---
    Fs.createPath(to, { content: edited });
    // Fs.writeSync(to, colors.join("\n"));
@@ -286,10 +292,10 @@ async function scss(
             const name = key === "default" ? "" : "-" + key;
             let realVal = colors[item][key];
             //--------
-            const { space } = await parse(realVal);
+            // const { space } = await parse(realVal);
 
             const value = useRoots
-               ? `${space}(var(--color-${item}${name}));`
+               ? `var(--color-${item}${name});`
                : realVal + ";";
             //-------
             list.push(`${colorName}${name}: ${value}`);

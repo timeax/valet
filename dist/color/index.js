@@ -3,10 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = default_1;
 const utilities_1 = require("@timeax/utilities");
 const chokidar_1 = __importDefault(require("chokidar"));
+const find_package_json_1 = __importDefault(require("find-package-json"));
 const sass_1 = __importDefault(require("sass"));
 const sass_2 = require("./sass");
+const media_1 = require("../media");
 function default_1(program) {
     program
         .command("colors <source>")
@@ -14,12 +17,10 @@ function default_1(program) {
         .option("-w --watch <boolean>")
         .action(run);
     program
-        .command("cc [source]")
-        .description("Create color variables from tailwind, sass and css")
-        .option("-s, --start")
-        .action(run);
+        .command("cnf [source]")
+        .description("Run valet cli functions from config file")
+        .action(fromConfig);
 }
-exports.default = default_1;
 async function start(source, modal, hasRun = false) {
     if (source.startsWith("../") ||
         source.startsWith("./") ||
@@ -37,6 +38,8 @@ async function start(source, modal, hasRun = false) {
                 ///---
                 if (key === "useRoot")
                     continue;
+                if (!value)
+                    continue;
                 if (!useRoot && key === "cssVars")
                     if (!hasRun &&
                         (value.startsWith("./") ||
@@ -44,13 +47,120 @@ async function start(source, modal, hasRun = false) {
                             value.startsWith("../"))) {
                         modal[key] = utilities_1.Fs.join(process.cwd(), value);
                     }
+                if (key == 'tailwind' && typeof useTailwind !== 'string')
+                    continue;
                 (0, sass_2.save)(modal[key], colors, key, !!useTailwind, useRoot);
             }
         }
     }
-    return (0, sass_2.toFigma)(colors || {});
+    if (modal.figma !== undefined && modal.figma)
+        return (0, sass_2.toFigma)(colors || {});
 }
-async function fromConfig(source, params) {
+function fromPackageJson(source) {
+    if (!source.__path.includes('node_modules') && source.dweb)
+        return true;
+}
+function isRelative(source) {
+    source = utilities_1.Fs.format(source);
+    return source.startsWith('/') || source.startsWith('./') || source.startsWith('../');
+}
+function getJson(source) {
+    let config;
+    if (!source) {
+        const f = (0, find_package_json_1.default)(process.cwd());
+        var json;
+        //-------
+        while (!((json = f.next().value) && fromPackageJson(json)))
+            ;
+        source = json?.__path;
+        //--------
+        if (json)
+            config = json.dweb;
+    }
+    else {
+        if (isRelative(source))
+            source = utilities_1.Fs.join(process.cwd(), utilities_1.Fs.format(source));
+        config = JSON.parse(utilities_1.Fs.content(source) || "{}");
+    }
+    if (!config)
+        throw Error('Could not load config file in ' + process.cwd());
+    return { config, configSource: source };
+}
+async function runColors(props, watch) {
+    const path = props.source;
+    const options = {
+        css: props.css,
+        root: props.cssRoots,
+        scss: props.scss,
+        tailwind: props.tailwind,
+        //@ts-ignore
+        cssVars: props.cssRoots,
+        useRoot: props.cssRoots,
+        figma: props.figma || false
+    };
+    const watcher = await lastRun(path, options, { w: watch });
+    //@ts-ignore
+    if (runColors.watcher)
+        runColors.watcher.close();
+    //@ts-ignore
+    runColors.watcher = watcher;
+}
+function watchConfig(path, source) {
+    //@ts-ignore
+    if (watchConfig.watcher)
+        return;
+    const watcher = chokidar_1.default.watch(path, {
+        persistent: true,
+    });
+    watcher.on("change", () => {
+        console.log("A change occured....");
+        console.log("Stopping watchers..");
+        console.log("Recompiling..");
+        fromConfig(source);
+    });
+    //@ts-ignore
+    watchConfig.watcher = watcher;
+}
+async function fromConfig(source) {
+    let { config, configSource } = getJson(source);
+    watchConfig(configSource, source);
+    const runners = {
+        colors: (props) => runColors(props, config.watch),
+        mediaQuery: (props) => {
+            const points = props.breakpoints || {};
+            const keys = Object.keys(points);
+            if (keys.length < 1)
+                return;
+            let path = props.outDir;
+            if (isRelative(path))
+                path = utilities_1.Fs.join(process.cwd(), path);
+            (0, media_1.run)(path, { b: [keys.map(item => `${item}:${points[item]}`).join(',')], ...props });
+        },
+        watch: undefined
+    };
+    for (const key in config) {
+        if (Object.prototype.hasOwnProperty.call(config, key)) {
+            const element = config[key];
+            //---------
+            const func = runners[key];
+            if (func) {
+                func(element);
+            }
+        }
+    }
+}
+async function lastRun(source, modal, props) {
+    await start(source, modal);
+    if (props.watch || props.w) {
+        const watcher = chokidar_1.default.watch(source, {
+            persistent: true,
+        });
+        watcher.on("change", () => {
+            console.log("File change detected...");
+            start(source, modal, true);
+        });
+        return watcher;
+    }
 }
 async function run(source, props) {
     const { default: { prompt }, } = await import("inquirer");
@@ -61,16 +171,7 @@ async function run(source, props) {
         selection.options.unshift("root", "vars");
         //--------
         const modal = await prompt(selection.options.map((item) => ({ ...Options[item] })));
-        await start(source, modal);
-        if (props.watch || props.w) {
-            const watcher = chokidar_1.default.watch(source, {
-                persistent: true,
-            });
-            watcher.on("change", () => {
-                console.log("File change detected...");
-                start(source, modal, true);
-            });
-        }
+        lastRun(source, modal, props);
     }
 }
 async function compile(content) {

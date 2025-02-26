@@ -93,9 +93,11 @@ export declare namespace Fs {
     export function mkdir(path: string): boolean;
     type WriteCallback = (err: any) => void;
     export function write(path: string, data?: string | WriteCallback, callback?: WriteCallback): void;
-    export function writeSync(path: string, data?: any): void;
+    export function writeSync(path: string, data?: any): Promise<void>;
     export function watch(path: string | string[], options?: chokidar.WatchOptions): chokidar.FSWatcher;
     export function deleteFile(path: string): void;
+    export function isRelative(path: string): boolean;
+    export function fPath(path: string, cwd?: string): string;
     export function deleteFolder(link: string): void;
     export function createRel(basePath: string, path: string): string;
     interface PathOptions {
@@ -110,7 +112,7 @@ export declare namespace Fs {
      *
      * @returns true if sucessful
      */
-    export function createPath(base: string, options?: PathOptions): boolean;
+    export function createPath(base: string, options?: PathOptions): Promise<boolean>;
     export function samePath(path1: string, path2: string): boolean;
     export function unwatchFile(path: string | string[]): void;
     export function content(path: string): string | undefined;

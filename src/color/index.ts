@@ -1,10 +1,12 @@
 import { Fs } from "@timeax/utilities";
 import chokidar from "chokidar";
 import { Command } from "commander";
+import finder from 'find-package-json';
 //@ts-ignore
 import { QuestionCollection } from "inquirer";
 import sass from "sass";
 import { extractColors, getString, save, toFigma } from "./sass";
+import { run as insertQuery } from '../media';
 
 export default function (program: Command) {
    program
@@ -14,10 +16,9 @@ export default function (program: Command) {
       .action(run);
 
    program
-      .command("cc [source]")
-      .description("Create color variables from tailwind, sass and css")
-      .option("-s, --start")
-      .action(run);
+      .command("cnf [source]")
+      .description("Run valet cli functions from config file")
+      .action(fromConfig);
 }
 
 async function start(source: string, modal, hasRun: boolean = false) {
@@ -40,6 +41,8 @@ async function start(source: string, modal, hasRun: boolean = false) {
             const value = modal[key];
             ///---
             if (key === "useRoot") continue;
+            if (!value) continue;
+
             if (!useRoot && key === "cssVars")
                if (
                   !hasRun &&
@@ -50,16 +53,134 @@ async function start(source: string, modal, hasRun: boolean = false) {
                   modal[key] = Fs.join(process.cwd(), value);
                }
 
+            if (key == 'tailwind' && typeof useTailwind !== 'string') continue;
             save(modal[key], colors, key as any, !!useTailwind, useRoot);
          }
       }
    }
 
-   return toFigma(colors || {});
+   if (modal.figma !== undefined && modal.figma)
+      return toFigma(colors || {});
 }
 
-async function fromConfig(source: string, params: {}) {
+function fromPackageJson(source: finder.PackageWithPath) {
+   if (!source.__path.includes('node_modules') && source.dweb) return true
+}
 
+function isRelative(source: string) {
+   source = Fs.format(source);
+   return source.startsWith('/') || source.startsWith('./') || source.startsWith('../');
+}
+
+function getJson(source?: string) {
+   let config: Config | undefined;
+   if (!source) {
+      const f = finder(process.cwd());
+      var json: finder.PackageWithPath;
+      //-------
+      while (!((json = f.next().value) && fromPackageJson(json)));
+      source = json?.__path;
+      //--------
+      if (json) config = json.dweb;
+   } else {
+      if (isRelative(source)) source = Fs.join(process.cwd(), Fs.format(source));
+      config = JSON.parse(Fs.content(source) || "{}");
+   }
+
+   if (!config) throw Error('Could not load config file in ' + process.cwd());
+
+   return { config, configSource: source };
+}
+
+async function runColors(props: ColorConfig, watch?: boolean) {
+   const path = props.source;
+
+   const options: Record<keyof typeof Options, string> = {
+      css: props.css,
+      root: props.cssRoots,
+      scss: props.scss,
+      tailwind: props.tailwind,
+      //@ts-ignore
+      cssVars: props.cssRoots,
+      useRoot: props.cssRoots,
+      figma: props.figma || false
+   }
+
+   const watcher = await lastRun(path, options, { w: watch });
+   //@ts-ignore
+   if (runColors.watcher) runColors.watcher.close();
+   //@ts-ignore
+   runColors.watcher = watcher;
+}
+
+function watchConfig(path: string, source: string) {
+   //@ts-ignore
+   if (watchConfig.watcher) return;
+
+   const watcher = chokidar.watch(path, {
+      persistent: true,
+   });
+
+   watcher.on("change", () => {
+      console.log("A change occured....");
+      console.log("Stopping watchers..");
+      console.log("Recompiling..");
+      fromConfig(source)
+   });
+
+   //@ts-ignore
+   watchConfig.watcher = watcher;
+}
+
+async function fromConfig(source: string) {
+   let { config, configSource } = getJson(source);
+
+   watchConfig(configSource, source)
+
+   const runners: Record<keyof Config, any> = {
+      colors: (props) => runColors(props, config.watch),
+      mediaQuery: (props) => {
+         const points = props.breakpoints || {};
+         const keys = Object.keys(points);
+
+         if (keys.length < 1) return;
+
+         let path = props.outDir
+
+         if (isRelative(path)) path = Fs.join(process.cwd(), path);
+
+         insertQuery(path, { b: [keys.map(item => `${item}:${points[item]}`).join(',')], ...props })
+      },
+      watch: undefined
+   }
+
+   for (const key in config) {
+      if (Object.prototype.hasOwnProperty.call(config, key)) {
+         const element = config[key];
+         //---------
+         const func = runners[key];
+         if (func) {
+            func(element);
+         }
+      }
+   }
+}
+
+async function lastRun(source: string, modal: any, props) {
+   await start(source, modal);
+
+   if (props.watch || props.w) {
+      const watcher = chokidar.watch(source, {
+         persistent: true,
+      });
+
+      watcher.on("change", () => {
+         console.log("File change detected...");
+         start(source, modal, true);
+      });
+
+      return watcher;
+   }
 }
 
 async function run(
@@ -80,18 +201,7 @@ async function run(
          selection.options.map((item) => ({ ...Options[item] }))
       );
 
-      await start(source, modal);
-
-      if (props.watch || props.w) {
-         const watcher = chokidar.watch(source, {
-            persistent: true,
-         });
-
-         watcher.on("change", () => {
-            console.log("File change detected...");
-            start(source, modal, true);
-         });
-      }
+      lastRun(source, modal, props);
    }
 }
 
@@ -135,7 +245,7 @@ const Select: QuestionCollection<any> = [
    },
 ];
 
-const Options: { [x: string]: QuestionCollection<any> } = {
+const Options = {
    tailwind: {
       name: "tailwind",
       message: "Enter relative or absolute path to tailwind output(.js | .ts)",

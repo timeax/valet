@@ -22,6 +22,15 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -170,7 +179,7 @@ var util;
         }
     }
     util.avoid = avoid;
-})(util = exports.util || (exports.util = {}));
+})(util || (exports.util = util = {}));
 util.avoid(() => {
     return '';
 }).then((err, value) => {
@@ -319,8 +328,10 @@ var Fs;
     }
     Fs.write = write;
     function writeSync(path, data = '') {
-        path = format(path);
-        fs.writeFileSync(path, data);
+        return __awaiter(this, void 0, void 0, function* () {
+            path = format(path);
+            fs.writeFileSync(path, data);
+        });
     }
     Fs.writeSync = writeSync;
     function watch(path, options) {
@@ -331,6 +342,15 @@ var Fs;
         fs.unlinkSync(path);
     }
     Fs.deleteFile = deleteFile;
+    function isRelative(path) {
+        path = format(path);
+        return ['../', './', '/'].some(item => path.startsWith(item));
+    }
+    Fs.isRelative = isRelative;
+    function fPath(path, cwd = __dirname) {
+        return isRelative(path) ? Fs.join(cwd, path) : path;
+    }
+    Fs.fPath = fPath;
     function deleteFolder(link) {
         var _a;
         var content = files(link);
@@ -361,33 +381,35 @@ var Fs;
      * @returns true if sucessful
      */
     function createPath(base, options = {}) {
-        let ignore = options === null || options === void 0 ? void 0 : options.ignore;
-        //--
-        base = format(base);
-        while (!exists(base)) {
-            let dirname = dir(base);
-            if (exists(dirname)) {
-                if (!exists(base)) {
-                    if (ignore)
-                        mkdir(base);
-                    else {
-                        if (base.endsWith('/'))
+        return __awaiter(this, void 0, void 0, function* () {
+            let ignore = options === null || options === void 0 ? void 0 : options.ignore;
+            //--
+            base = format(base);
+            while (!exists(base)) {
+                let dirname = dir(base);
+                if (exists(dirname)) {
+                    if (!exists(base)) {
+                        if (ignore)
                             mkdir(base);
-                        break;
+                        else {
+                            if (base.endsWith('/'))
+                                mkdir(base);
+                            break;
+                        }
                     }
                 }
+                else {
+                    if (!(options === null || options === void 0 ? void 0 : options.ignore))
+                        options.ignore = true;
+                    yield createPath(dirname, options);
+                }
             }
-            else {
-                if (!(options === null || options === void 0 ? void 0 : options.ignore))
-                    options.ignore = true;
-                createPath(dirname, options);
-            }
-        }
-        if (options.content && !options.ignore)
-            options.callack
-                ? write(base, options.content, options.callack)
-                : writeSync(base, options.content);
-        return exists(base);
+            if (options.content && !options.ignore)
+                options.callack
+                    ? write(base, options.content, options.callack)
+                    : yield writeSync(base, options.content);
+            return exists(base);
+        });
     }
     Fs.createPath = createPath;
     function samePath(path1, path2) {
@@ -427,7 +449,7 @@ var Fs;
         }
     }
     Fs.copy = copy;
-})(Fs = exports.Fs || (exports.Fs = {}));
+})(Fs || (exports.Fs = Fs = {}));
 class Default {
     constructor(...props) {
         this._isSet = false;

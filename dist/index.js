@@ -9,6 +9,7 @@ const commander_1 = require("commander");
 const program = new commander_1.Command();
 const utilities_1 = require("@timeax/utilities");
 const color_1 = __importDefault(require("./color"));
+const media_1 = require("./media");
 function restartServer() {
     (0, child_process_1.exec)('httpd -k restart -n "Apache2.4"', (err) => {
         if (err)
@@ -262,6 +263,7 @@ async function listDomains(props) {
     console.log(`\nSee vhosts file at -> ${manager._vhosts}`);
 }
 program.name("web").version("0.0.2").description("Web Development Utility CMD Interface");
+(0, media_1.mediaQuery)(program);
 program
     .command("list")
     .description("Get a full list of a installed domains")
