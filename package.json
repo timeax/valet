@@ -1,6 +1,6 @@
 {
-  "name": "dweb",
-  "version": "1.0.0",
+  "name": "@timeax/valet",
+  "version": "1.0.1",
   "description": "",
   "main": "dist/index.js",
   "bin": "dist/index.js",
@@ -27,22 +27,5 @@
     "@types/find-package-json": "^1.2.6",
     "@types/inquirer": "^9.0.7",
     "@types/node": "^20.10.6"
-  },
-  "dweb": {
-    "watch": true,
-    "colors": {
-      "cssRoots": "./styles/vars.css",
-      "css": "./styles/colors.css",
-      "source": "./sass/_colors.scss",
-      "scss": "./scss/colors.scss",
-      "tailwind": true
-    },
-    "mediaQuery": {
-      "breakpoints": {
-        "2xs": "1440px"
-      },
-      "tailwind": "./tailwind/breakpoints.js",
-      "outDir": "./resources/js/Styles/mixins/_query.scss"
-    }
   }
 }

@@ -21,8 +21,21 @@ const attrs = {
 };
 
 const manager = {
-   _hosts: "C:/Windows/System32/drivers/etc/hosts",
-   _vhosts: "D:/xampp/apache/conf/extra/httpd-vhosts.conf",
+   get _hosts() {
+      let def = process.env.HOSTS || "C:/Windows/System32/drivers/etc/hosts";
+      const drive = process.env.HOSTS ? null : process.env.DRIVE;
+      ///---
+      if (drive) def = drive + def.substring(1);
+      //---
+      return def;
+   },
+   get _vhosts() {
+      let def = process.env.VP || "D:/xampp/apache/conf/extra/httpd-vhosts.conf";
+      const drive = process.env.VP ? null : process.env.VD;
+      ///---
+      if (drive) def = drive + def.substring(1);
+      return def;
+   },
    get hosts() {
       return Fs.content(this._hosts) || "";
    },
