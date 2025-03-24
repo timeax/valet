@@ -120,7 +120,7 @@ const processFile = async (file: string): Promise<void> => {
       }
 
       // Save processed CSS
-      fs.writeFileSync(outputCssPath, finalCss);
+      Fs.createPath(outputCssPath, { content: finalCss });
       console.log(log(`✅ Processed: ${outputCssPath} (Minify: ${config.minify}, Lightning CSS: ${config.lightningCss})`));
    } catch (error: any) {
       console.error(log(`❌ Error processing ${file}: ${error.message}\n${error.stderr?.toString() || ""}`));
