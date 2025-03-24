@@ -1,3 +1,4 @@
+import { Fs } from '@timeax/utilities';
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -9,7 +10,7 @@ let lightningCss: any = null;
 let defaultTargets: Record<string, number> = {}; // Store default targets
 
 // Log function with timestamps
-const log = (message: string) => `[${new Date().toLocaleTimeString()}] ${message}`;
+const log = (message: string) => `${message}`;
 
 /**
  * Initialize Lightning CSS (if available)
@@ -100,7 +101,7 @@ const processFile = async (file: string): Promise<void> => {
       const scssContent = config.additionalData + fs.readFileSync(scssPath, "utf-8");
 
       // Compile SCSS (using --stdin for max speed)
-      const compiledCss = execSync(`npx sass --stdin --load-path=${config.source}`, {
+      const compiledCss = execSync(`npx sass --stdin  --load-path=${scssPath} --load-path=${config.source}`, {
          input: scssContent,
          encoding: "utf-8",
       });
@@ -165,7 +166,14 @@ const loadConfig = (configPath: string): boolean => {
    if (fs.existsSync(configPath)) {
       try {
          const rawData = fs.readFileSync(configPath, "utf-8");
-         Object.assign(config, JSON.parse(rawData));
+         const loadedConfig = JSON.parse(rawData);
+
+         // Resolve paths relative to the config file's directory
+         const configDir = path.dirname(Fs.isRelative(configPath) ? Fs.fPath(configPath, process.cwd()) : configPath);
+         if (loadedConfig.source) loadedConfig.source = path.resolve(configDir, loadedConfig.source);
+         if (loadedConfig.out) loadedConfig.out = path.resolve(configDir, loadedConfig.out);
+
+         Object.assign(config, loadedConfig);
          console.log(log(`✅ Loaded config from ${configPath}`));
          return true;
       } catch (error) {
