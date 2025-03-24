@@ -127,9 +127,26 @@ const processFile = async (file: string): Promise<void> => {
    }
 };
 
-/**
- * Process all SCSS files
- */
+const getAllScssFiles = (dir: string): string[] => {
+   let results: string[] = [];
+
+   if (!fs.existsSync(dir)) return results;
+
+   const list = fs.readdirSync(dir);
+   for (const file of list) {
+      const fullPath = path.join(dir, file);
+      const stat = fs.statSync(fullPath);
+
+      if (stat.isDirectory()) {
+         results = results.concat(getAllScssFiles(fullPath)); // Recursively read subdirectories
+      } else if (file.endsWith(".scss")) {
+         results.push(path.relative(config.source, fullPath)); // Store relative path
+      }
+   }
+
+   return results;
+};
+
 const processAllFiles = async (): Promise<void> => {
    console.log(log("🔄 Processing all SCSS files..."));
 
@@ -138,11 +155,12 @@ const processAllFiles = async (): Promise<void> => {
       return;
    }
 
-   const scssFiles = fs.readdirSync(config.source).filter((file) => file.endsWith(".scss"));
+   const scssFiles = getAllScssFiles(config.source).filter((file) => !isIgnored(file)); // Get all SCSS files
 
    await Promise.all(scssFiles.map(processFile));
    console.log(log("🎉 Initial compilation complete!"));
 };
+
 /**
  * Watch for changes & recompile on the fly
  */
