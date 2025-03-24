@@ -1,5 +1,6 @@
+import sass from 'sass';
 import { Fs } from '@timeax/utilities';
-import { execSync } from "child_process";
+// import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import chokidar from "chokidar";
@@ -101,18 +102,25 @@ const processFile = async (file: string): Promise<void> => {
       const scssContent = config.additionalData + fs.readFileSync(scssPath, "utf-8");
 
       // Compile SCSS (using --stdin for max speed)
-      const compiledCss = execSync(`npx sass --stdin  --load-path=${scssPath} --load-path=${config.source}`, {
-         input: scssContent,
-         encoding: "utf-8",
+      // const compiledCss = execSync(`npx sass --stdin  --load-path=${scssPath} --load-path=${config.source}`, {
+      //    input: scssContent,
+      //    encoding: "utf-8",
+      // });
+
+      const compiled = await sass.compileStringAsync(scssContent, {
+         loadPaths: [config.source, scssPath], // Resolve imports properly
+         sourceMap: false, // Enable source maps for debugging
+         silenceDeprecations: ['call-string']
       });
 
-      let finalCss = compiledCss;
+      let finalCss = compiled.css;
+      // let finalCss = compiledCss;
 
       // Optimize CSS with Lightning CSS if enabled and available
       if (config.lightningCss && lightningCss) {
          const { transform } = lightningCss;
          const result = transform({
-            code: Buffer.from(compiledCss),
+            code: Buffer.from(compiled.css),
             minify: config.minify,
             targets: config.targets,
          });
