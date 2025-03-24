@@ -108,7 +108,7 @@ const processFile = async (file: string): Promise<void> => {
       // });
 
       const compiled = await sass.compileStringAsync(scssContent, {
-         loadPaths: [config.source, scssPath], // Resolve imports properly
+         loadPaths: [scssPath, config.source], // Resolve imports properly
          sourceMap: false, // Enable source maps for debugging
          silenceDeprecations: ['call-string']
       });
