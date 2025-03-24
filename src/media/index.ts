@@ -76,7 +76,7 @@ function generateSassFunctions() {
 /**
  * Default Breakpoints
  */
-function defaultBreakpoints() {
+export function defaultBreakpoints() {
    return {
       "i3.2": '320px',
       "13.6": '360px',

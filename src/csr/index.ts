@@ -2,7 +2,7 @@ import chokidar from 'chokidar';
 import { Fs } from "@timeax/utilities";
 import { Command } from "commander";
 import { colorConfig } from "../color";
-import { generateMediaQueries } from "../media";
+import { defaultBreakpoints, generateMediaQueries } from "../media";
 
 const defaultConfig: Config = {
    outFile: "./app.css",
@@ -14,15 +14,7 @@ const defaultConfig: Config = {
       type: "tailwind",
    },
    media: {
-      breakpoints: {
-         xs: "320px",
-         sm: "360px",
-         md: "768px",
-         lg: "1024px",
-         xl: "1280px",
-         "2xl": "1536px",
-         "4k": "1920px",
-      },
+      breakpoints: defaultBreakpoints(),
       outDir: "./styles",
       filename: "_mediaQuery.scss",
       type: "tailwind",
