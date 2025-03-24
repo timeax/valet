@@ -1,0 +1,29 @@
+{
+   "outFile": "./app.css",
+   "colors": {
+      "scss": "./dist/_colors.scss",
+      "css": "./dist/colors.css",
+      "source": "./_colors.scss",
+      "type": "tailwind"
+   },
+   "media": {
+      "breakpoints": {
+         "xs": "320px",
+         "sm": "360px",
+         "md": "768px",
+         "lg": "1024px",
+         "xl": "1280px",
+         "2xl": "1536px",
+         "4k": "1920px"
+      },
+      "outDir": "./dist",
+      "filename": "_mediaQuery.scss",
+      "type": "tailwind",
+      "useSass": false
+   },
+   "fonts": {
+      "primary": "Inter, sans-serif",
+      "secondary": "Roboto, sans-serif"
+   },
+   "watch": false
+}

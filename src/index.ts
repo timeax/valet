@@ -5,8 +5,8 @@ import { exec } from "child_process";
 import { Command } from "commander";
 const program = new Command();
 import { Fs } from "@timeax/utilities";
-import color from "./color";
-import { mediaQuery } from "./media";
+import { createSassCompilerCommand } from "./sass-to-lightening";
+import csr from "./csr";
 
 function restartServer() {
    exec('httpd -k restart -n "Apache2.4"', (err) => {
@@ -51,9 +51,6 @@ const manager = {
       Fs.writeSync(this._vhosts, value);
    },
 };
-
-
-color(program);
 
 function write() {
    writeVHost();
@@ -346,52 +343,7 @@ interface ListDomains {
 }
 
 
-program.name("web").version("0.0.2").description("Web Development Utility CMD Interface");
 
-mediaQuery(program);
-
-program
-   .command("list")
-   .description("Get a full list of a installed domains")
-   .option("-f, --format <id...>")
-   .option("-rm, --remove <id...>")
-   .action(listDomains);
-
-program
-   .command("l")
-   .description("Get a full list of a installed domains")
-   .option("-f, --format <id...>")
-   .option("-rm, --remove <id...>")
-   .action(listDomains);
-
-program
-   .command("install")
-   .description("Install a local domain on your system")
-   .option("-d, --domain <domainName>")
-   .option("-p, --path <filepath>")
-   .action(install);
-
-program
-   .command("update")
-   .description("update a local domain on your system")
-   .option("-d, --domain <domainName>")
-   .option("-p, --path <filepath>")
-   .action(update);
-
-program
-   .command("i")
-   .description("Install a local domain on your system")
-   .option("-d, --domain <domainName>")
-   .option("-p, --path <filepath>")
-   .action(install);
-
-program
-   .command("del")
-   .description("Deletes virtual host")
-   .option("-d, --domain <domain...>", "-p, --path <path>")
-   .action(del);
-
-program.parse(process.argv);
 
 function extract(
    hosts: string,
@@ -470,3 +422,72 @@ function getTable() {
    }
 }
 
+
+
+(async () => {
+   const { default: chalk } = await import("chalk");
+
+   function getTimestamp() {
+      return chalk.gray(`[${new Date().toISOString()}]`);
+   }
+
+   const originalLog = console.log;
+   const originalError = console.error;
+   const originalWarn = console.warn;
+   const originalInfo = console.info;
+
+   console.log = (...args) => originalLog(getTimestamp(), chalk.white(...args));
+   console.error = (...args) => originalError(getTimestamp(), chalk.red("ERROR:"), chalk.red(...args));
+   console.warn = (...args) => originalWarn(getTimestamp(), chalk.yellow("WARNING:"), chalk.yellow(...args));
+   console.info = (...args) => originalInfo(getTimestamp(), chalk.blue("INFO:"), chalk.blue(...args));
+
+   program.name("web").version("0.0.2").description("Web Development Utility CMD Interface");
+
+   createSassCompilerCommand(program);
+
+   program
+      .command("list")
+      .description("Get a full list of a installed domains")
+      .option("-f, --format <id...>")
+      .option("-rm, --remove <id...>")
+      .action(listDomains);
+
+   program
+      .command("l")
+      .description("Get a full list of a installed domains")
+      .option("-f, --format <id...>")
+      .option("-rm, --remove <id...>")
+      .action(listDomains);
+
+   program
+      .command("install")
+      .description("Install a local domain on your system")
+      .option("-d, --domain <domainName>")
+      .option("-p, --path <filepath>")
+      .action(install);
+
+   program
+      .command("update")
+      .description("update a local domain on your system")
+      .option("-d, --domain <domainName>")
+      .option("-p, --path <filepath>")
+      .action(update);
+
+   program
+      .command("i")
+      .description("Install a local domain on your system")
+      .option("-d, --domain <domainName>")
+      .option("-p, --path <filepath>")
+      .action(install);
+
+   program
+      .command("del")
+      .description("Deletes virtual host")
+      .option("-d, --domain <domain...>", "-p, --path <path>")
+      .action(del);
+
+   csr(program);
+
+
+   program.parse(process.argv);
+})();

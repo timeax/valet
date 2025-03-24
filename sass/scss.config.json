@@ -1,0 +1,14 @@
+{
+  "$schema": "https://gist.githubusercontent.com/timeax/f37af1fbe0de58a5a165d6f527e4ebc2/raw/41ad8489466368d67586c15c530e34c8786a805f/scss-to-lightening.json",
+  "source": "./",
+  "out": "./dist",
+  "additionalData": "\n    $primary: #3498db;\n    $secondary: #2ecc71;\n  ",
+  "targets": {},
+  "minify": true,
+  "lightningCss": true,
+  "ignore": [
+    "_*.scss",
+    "ignore.scss",
+    "ignored-folder/"
+  ]
+}

@@ -2,6 +2,19 @@
   "files.exclude": {
     "node_modules": true,
     "scripts": true,
-    ".vscode": true
+    ".vscode": true,
+    "package.json": true,
+    ".git": true,
+    ".gitattributes": true,
+    ".gitignore": true,
+    "colors.theme.json": true,
+    "dist": true,
+    "package-lock.json": true,
+    "tailwind": true,
+    "test.js": true,
+    "resources": true,
+    "styles": true,
+    "src\\tsconfig.json": true,
+    "scss": true
   }
 }
