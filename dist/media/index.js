@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TAB = void 0;
 exports.generateMediaQueries = generateMediaQueries;
+exports.defaultBreakpoints = defaultBreakpoints;
 const utilities_1 = require("@timeax/utilities");
 const theme_1 = require("../utils/theme");
 exports.TAB = '   ';

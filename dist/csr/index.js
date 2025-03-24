@@ -21,15 +21,7 @@ const defaultConfig = {
         type: "tailwind",
     },
     media: {
-        breakpoints: {
-            xs: "320px",
-            sm: "360px",
-            md: "768px",
-            lg: "1024px",
-            xl: "1280px",
-            "2xl": "1536px",
-            "4k": "1920px",
-        },
+        breakpoints: (0, media_1.defaultBreakpoints)(),
         outDir: "./styles",
         filename: "_mediaQuery.scss",
         type: "tailwind",
