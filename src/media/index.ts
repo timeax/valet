@@ -73,8 +73,8 @@ function generateSassFunctions() {
 export function defaultBreakpoints() {
    return {
       "i3.2": '320px',
-      "13.6": '360px',
-      "13.75": '375px',
+      "i3.6": '360px',
+      "i3.75": '375px',
       "i4.14": '414px',
       "i4": '400px',
       "i5.76": '576px',
