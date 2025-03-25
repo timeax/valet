@@ -92,7 +92,11 @@ export async function toFigma(list) {
 
 async function css(to, colors, useRoots) {
    const list = Object.entries(colors).flatMap(([item, shades]) =>
-      Object.entries(shades).map(([key, value]) => `.bg-${item}-${key} { background-color: ${useRoots ? `var(--color-${item}-${key})` : value} } .color-${item}-${key} { color: ${useRoots ? `var(--color-${item}-${key})` : value} }`)
+      Object.entries(shades).map(([key, value]) => {
+         const suffix = key.toLowerCase() === "default" ? "" : `-${key}`;
+         return `.bg-${item}${suffix} { background-color: ${useRoots ? `var(--color-${item}-${key})` : value} } 
+                 .color-${item}${suffix} { color: ${useRoots ? `var(--color-${item}-${key})` : value} }`;
+      })
    );
    await Fs.createPath(to, { content: list.join("\n") });
 }
@@ -101,7 +105,7 @@ async function roots(to, colors, useTailwind) {
    const entries = Object.entries(colors).flatMap(([item, shades]) =>
       Object.entries(shades).map(async ([key, value]) => {
          let parsedValue = useTailwind ? await parse(value) : value;
-
+         let normalizedKey = key.toLowerCase() === "default" ? "" : `-${key}`;
          // Ensure it's a string and normalize whitespace
          parsedValue = typeof parsedValue === "string" ? parsedValue.trim() : parsedValue;
 
@@ -111,7 +115,7 @@ async function roots(to, colors, useTailwind) {
          // Format correctly: Only wrap if it's NOT already in rgb/rgba format
          const colorString = isRGB ? parsedValue : `rgb(${parsedValue})`;
 
-         return `--color-${item}-${key}: ${colorString};`;
+         return `--color-${item}${normalizedKey}: ${colorString};`;
       })
    );
 
@@ -129,7 +133,13 @@ async function roots(to, colors, useTailwind) {
 
 async function scss(to, colors, useRoots) {
    const list = Object.entries(colors).flatMap(([item, shades]) =>
-      Object.entries(shades).map(([key, value]) => `$color-${item}-${key}: ${useRoots ? `var(--color-${item}-${key})` : value}; ${useRoots ? `$rc-${item}-${key}: var(--color-${item}-${key});` : ""}`)
+      Object.entries(shades).map(([key, value]) => {
+         let normalizedKey = key.toLowerCase() === "default" ? "" : `-${key}`;
+
+         return `$color-${item}${normalizedKey}: ${useRoots ? `var(--color-${item}${normalizedKey})` : value};` +
+            (useRoots ? ` $rc-${item}${normalizedKey}: var(--color-${item}${normalizedKey});` : "");
+      })
    );
+
    await Fs.createPath(to, { content: list.join("\n") });
 }

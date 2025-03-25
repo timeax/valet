@@ -1,5 +1,10 @@
-.bg-primary-30 { background-color: var(--color-primary-30) } .color-primary-30 { color: var(--color-primary-30) }
-.bg-primary-40 { background-color: var(--color-primary-40) } .color-primary-40 { color: var(--color-primary-40) }
-.bg-primary-100 { background-color: var(--color-primary-100) } .color-primary-100 { color: var(--color-primary-100) }
-.bg-primary-default { background-color: var(--color-primary-default) } .color-primary-default { color: var(--color-primary-default) }
-.bg-primary-red { background-color: var(--color-primary-red) } .color-primary-red { color: var(--color-primary-red) }
+.bg-primary-30 { background-color: var(--color-primary-30) } 
+                 .color-primary-30 { color: var(--color-primary-30) }
+.bg-primary-40 { background-color: var(--color-primary-40) } 
+                 .color-primary-40 { color: var(--color-primary-40) }
+.bg-primary-100 { background-color: var(--color-primary-100) } 
+                 .color-primary-100 { color: var(--color-primary-100) }
+.bg-primary { background-color: var(--color-primary-default) } 
+                 .color-primary { color: var(--color-primary-default) }
+.bg-primary-red { background-color: var(--color-primary-red) } 
+                 .color-primary-red { color: var(--color-primary-red) }
