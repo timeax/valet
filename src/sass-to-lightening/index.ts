@@ -155,7 +155,7 @@ const getAllScssFiles = (dir: string): string[] => {
    return results;
 };
 
-const processAllFiles = async (): Promise<void> => {
+const processAllFiles = async (init = true): Promise<void> => {
    console.log(log("🔄 Processing all SCSS files..."));
 
    if (!fs.existsSync(config.source)) {
@@ -166,23 +166,59 @@ const processAllFiles = async (): Promise<void> => {
    const scssFiles = getAllScssFiles(config.source).filter((file) => !isIgnored(file)); // Get all SCSS files
 
    await Promise.all(scssFiles.map(processFile));
-   console.log(log("🎉 Initial compilation complete!"));
+   if (init) console.log(log("🎉 Initial compilation complete!"));
+   else console.log(log("🎉 Recompilation complete!"));
+
 };
 
+let processingQueue = new Set<string>();
+let debounceTimeout = null;
+
 /**
- * Watch for changes & recompile on the fly
+ * Watch for SCSS changes and recompile on the fly
  */
 const watchFiles = () => {
-   chokidar.watch(config.source, { ignoreInitial: true }).on("all", (event, filePath) => {
+   if (!config?.source) {
+      console.error("❌ Error: config.source is undefined or invalid.");
+      return;
+   }
+
+   const watcher = chokidar.watch(config.source, { ignoreInitial: true });
+
+   watcher.on("all", (event, filePath) => {
       const file = path.relative(config.source, filePath);
+
       if (file.endsWith(".scss") && !isIgnored(file)) {
          if (event === "add" || event === "change") {
-            processFile(file);
+            const fileName = path.basename(file);
+
+            if (fileName.startsWith("_")) {
+               console.log(`⚠️ Skipping partial SCSS file: ${file}`);
+               processAllFiles(false);
+               return; // Skip SCSS partials (files starting with "_")
+            }
+            processingQueue.add(file);
+
+            // Debounce processing to avoid excessive re-runs
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+               processingQueue.forEach((f) => processFile(f));
+               processingQueue.clear();
+            }, 200); // Adjust debounce time as needed
+         } else if (event === "unlink") {
+            console.log(`🗑️ File removed: ${file}`);
+            processAllFiles(false);
          }
       }
    });
+
+   watcher.on("error", (error) => {
+      console.error(`Watcher error: ${error.message}`);
+   });
+
    console.log(log("👀 Watching for SCSS changes..."));
 };
+
 
 
 /**

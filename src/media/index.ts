@@ -38,13 +38,7 @@ export async function generateMediaQueries(config: Config) {
       await Fs.writeSync(path, content);
    }
 
-   let content = `@use './breakpoints.scss';\n`;
-
-
-   if (useSass) {
-      content += generateSassFunctions();
-      await Fs.createPath(filePath, { content });
-   }
+   if (useSass) await Fs.createPath(filePath, { content: generateSassFunctions() });
 }
 
 /**
@@ -70,7 +64,7 @@ function convertBreakpointsToTheme(breakpoints: { [x: string]: string }) {
  * Generate SCSS Functions for Media Queries
  */
 function generateSassFunctions() {
-   return QUERY?.replace(PLACEHOLDER, "@use './breakpoints.scss';\n");;
+   return QUERY?.replace(PLACEHOLDER, "@use './breakpoints.scss' as *;\n");;
 }
 
 /**
