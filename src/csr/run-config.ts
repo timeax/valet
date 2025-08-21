@@ -6,6 +6,7 @@ import { generateMediaQueries } from "../media";
 import { mergeThemeCss } from "../utils/theme-merge";
 import { writeTailwindThemes } from "./tailwind-support";
 import { prettyCss } from "../utils/pretty";
+import { pathToFileURL } from "url";
 
 // ---- types & helpers you already had ----
 type ScopeMap = Map<string, Map<string, string>>; // scope -> (prop -> value)
@@ -92,10 +93,18 @@ export function combineIncomingSnapshots(colorsCss: string, extrasCss: string): 
 
 async function loadExtra(extra: Config["extra"]): Promise<Record<string, Record<string, string>> | null> {
    if (!extra) return null;
+
    if (typeof extra === "string") {
-      const mod = await import(path.isAbsolute(extra) ? extra : path.resolve(process.cwd(), extra));
-      return (mod.default ?? mod) as any;
+      // Resolve to absolute filesystem path
+      const abs = path.isAbsolute(extra) ? extra : path.resolve(process.cwd(), extra);
+
+      // Convert to file:// URL for ESM import (Windows-safe)
+      const url = pathToFileURL(abs).href;
+
+      const mod = await import(url);
+      return (mod as any).default ?? (mod as any);
    }
+
    return extra as any;
 }
 
