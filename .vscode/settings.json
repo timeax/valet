@@ -1,5 +1,14 @@
 {
   "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.classpath": true,
+    "**/.project": true,
+    "**/.settings": true,
+    "**/.factorypath": true,
     "node_modules": true,
     "scripts": true,
     ".vscode": true,
@@ -8,13 +17,14 @@
     ".gitattributes": true,
     ".gitignore": true,
     "colors.theme.json": true,
-    "dist": true,
     "package-lock.json": true,
     "tailwind": true,
     "test.js": true,
     "resources": true,
     "styles": true,
     "src\\tsconfig.json": true,
-    "scss": true
-  }
+    "scss": true,
+    "dist": true
+  },
+  "explorerExclude.backup": {}
 }

@@ -1,9 +1,10 @@
 $colors: (
    primary: (
-      default: #6e9df3,
+      #default: #6e9df3,
       100: rgb(163, 163, 231),
       40: rgb(179, 83, 83),
       30: rgb(0, 0, 4),
       red: rgba(191, 30, 30, 0.189),
+      --dark-red: rgba(191, 30, 30, 0.189),
    ),
 );

@@ -1,8 +1,9 @@
 import chokidar from 'chokidar';
 import { Fs } from "@timeax/utilities";
 import { Command } from "commander";
-import { colorConfig } from "../color";
 import { defaultBreakpoints, generateMediaQueries } from "../media";
+import { colorConfigWithTailwindMerge } from "./index.tailwind";
+import { runConfig } from './run-config';
 
 const defaultConfig: Config = {
    outFile: "./app.css",
@@ -10,7 +11,6 @@ const defaultConfig: Config = {
       scss: "./styles/_colors.scss",
       css: "./styles/colors.css",
       source: "./colors.scss",
-      figma: "",
       type: "tailwind",
    },
    media: {
@@ -18,13 +18,14 @@ const defaultConfig: Config = {
       outDir: "./styles",
       filename: "_mediaQuery.scss",
       type: "tailwind",
-      useSass: false,
+      useSass: true,
    },
-   fonts: {
-      primary: "Inter, sans-serif",
-      secondary: "Roboto, sans-serif",
+   extra: {
+      fonts: {
+         primary: "Inter, sans-serif",
+         secondary: "Roboto, sans-serif",
+      },
    },
-   watch: false,
 };
 
 /**
@@ -109,11 +110,15 @@ export async function getConfig(sourceDir?: string): Promise<Config | null> {
 
 
 
-function runConfig(config: Config) {
-   if (config.colors) colorConfig(config);
-   if (config.media) generateMediaQueries(config);
-   if (config.fonts) { }
-}
+// wherever you run config
+
+// function runConfig(config: Config) {
+//    if (config.colors) {
+//       // Use the new Tailwind-safe merge runner
+//       void colorConfigWithTailwindMerge(config);
+//    }
+//    if (config.media) generateMediaQueries(config);
+// }
 
 export default function csr(program: Command) {
    program

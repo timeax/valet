@@ -1,14 +1,14 @@
+:root {
+	--primary: oklch(0.6999 0.1368 261.7225);
+	--primary-red: oklch(0.5181 0.1946 27.457 / 0.189);
+}
+.dark {
+	--primary-red: oklch(0.5181 0.1946 27.457 / 0.189);
+}
 @theme {
-  --breakpoint-xs: 320px;
-        --breakpoint-sm: 360px;
-        --breakpoint-md: 768px;
-        --breakpoint-lg: 1024px;
-        --breakpoint-xl: 1280px;
-        --breakpoint-2xl: 1536px;
-        --breakpoint-4k: 1920px;
-    --color-primary-30: rgb(0, 0, 4);
-    --color-primary-40: rgb(179, 83, 83);
-    --color-primary-100: rgb(163, 163, 231);
-    --color-primary: rgb(110, 157, 243);
-    --color-primary-red: rgba(191, 30, 30, 0.189);
+	--color-primary: var(--primary);
+	--color-primary-100: oklch(0.7409 0.0976 283.763);
+	--color-primary-40: oklch(0.5623 0.1255 21.9132);
+	--color-primary-30: oklch(0.0482 0.0283 264.052);
+	--color-primary-red: var(--primary-red);
 }

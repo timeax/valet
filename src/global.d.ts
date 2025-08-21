@@ -1,12 +1,18 @@
 
+// src/types/config.ts (or your existing config typings)
+type ThemeOutputType = 'tailwind' | 'variables';
+type ColorFormat = 'hex' | 'rgb' | 'rgba' | 'oklch';
 
-interface ColorConfig {
-   scss?: string;    // Path to SCSS color variables
-   css?: string;     // Path to a CSS file containing color variables
-   source?: string;  // Source for color palette (e.g., JSON, API)
-   figma?: string;   // Figma design system link or exported file for colors
-   type: 'variables' | 'tailwind' | 'none' // defaults to tailwind
+interface ColorsConfig {
+   source: string;              // .scss | .json | .js/.mjs
+   scss?: string;               // optional SCSS variables file
+   css?: string;                // optional utility classes file
+   figma?: string | boolean;
+   type?: ThemeOutputType;      // keep for compatibility
+   themeKeys?: string[];        // e.g. ["dark","my-theme"]
+   colorFormat?: ColorFormat;   // 'hex' | 'rgb' | 'rgba' | 'oklch'
 }
+
 
 interface MediaQueryConfig {
    breakpoints?: {
@@ -18,15 +24,17 @@ interface MediaQueryConfig {
    useSass?: boolean; // should load and write predfined methods for scss 
 }
 
-interface FontConfig {
-   [x: string]: string
-} 
+interface ExtraConfig {
+   [x: string]: {
+      default?: string; // Default value for the extra configuration
+      [x: string]: string; // Additional custom configurations
+   }; // Additional custom configurations
+}
 
 // config-schema.ts
 interface Config {
    outFile?: string; // Path to the Tailwind CSS configuration file
    colors?: ColorConfig
    media?: MediaQueryConfig;
-   fonts?: FontConfig;
-   watch?: boolean
+   extra?: ExtraConfig | string // path to js file whose default export implements this ExtraConfig; // Additional custom configurations
 }

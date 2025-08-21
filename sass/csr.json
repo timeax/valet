@@ -4,7 +4,9 @@
       "scss": "./dist/_colors.scss",
       "css": "./dist/colors.css",
       "source": "./_colors.scss",
-      "type": "tailwind"
+      "type": "tailwind",
+      "themeKeys": ["dark"],
+      "colorFormat": "oklch"
    },
    "media": {
       "breakpoints": {
