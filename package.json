@@ -1,6 +1,6 @@
 {
   "name": "@timeax/valet",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "description": "",
   "main": "dist/index.js",
   "bin": "dist/index.js",
