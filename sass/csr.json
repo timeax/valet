@@ -29,6 +29,12 @@
       "font": {
          "sans": "'Inter, sans-serif'",
          "secondary": "Roboto, sans-serif"
+      },
+      "radius": {
+         "default": "0.25rem",
+         "sm": "0.125rem",
+         "lg": "0.5rem",
+         "full": "9999px"
       }
    },
    "watch": false

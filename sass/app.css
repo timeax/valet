@@ -13,4 +13,8 @@
 	--color-primary-red: var(--primary-red);
 	--font-sans: "Inter, sans-serif";
 	--font-secondary: Roboto, sans-serif;
+	--radius: 0.25rem;
+	--radius-sm: 0.125rem;
+	--radius-lg: 0.5rem;
+	--radius-full: 9999px;
 }

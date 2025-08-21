@@ -99,6 +99,37 @@ async function loadExtra(extra: Config["extra"]): Promise<Record<string, Record<
    return extra as any;
 }
 
+function normalizeCssValue(input: unknown): string {
+   if (input == null) return "";
+   let s = String(input).trim();
+
+   // Force raw: leading '@' means "do not keep wrapper quotes"
+   let forceRaw = false;
+   if (s.startsWith("@")) {
+      forceRaw = true;
+      s = s.slice(1).trim();
+   }
+
+   const isWrapped = (q: '"' | "'") => s.length >= 2 && s.startsWith(q) && s.endsWith(q);
+   const stripOuterQuotes = () => s.slice(1, -1);
+
+   // If forced raw, drop one pair of outer quotes if present
+   if (forceRaw) {
+      if (isWrapped('"') || isWrapped("'")) s = stripOuterQuotes();
+      return s;
+   }
+
+   // Heuristic: if the whole value is unnecessarily quoted around a CSS token, unquote it
+   const unquoted = (isWrapped('"') || isWrapped("'")) ? stripOuterQuotes() : s;
+   const looksRawToken = /^-?(\d+(\.\d+)?([a-z%]+)?|var\(|oklch\(|rgba?\(|hsl[a]?\(|lab\(|lch\(|calc\(|clamp\(|min\(|max\()/i.test(unquoted);
+
+   if ((isWrapped('"') || isWrapped("'")) && looksRawToken) {
+      s = unquoted;
+   }
+
+   return s;
+}
+
 /**
  * Build CSS blocks for "extra" theme tokens (fonts, radius, etc.)
  * Rules:
@@ -120,7 +151,7 @@ function buildExtrasCss(
       const entries = extra[group]; // e.g. { default: '...', lg: '...', '#sm': '...', '--dark-lg': '...' }
 
       for (const rawKey of Object.keys(entries)) {
-         const val = entries[rawKey];
+         const val = normalizeCssValue(entries[rawKey]);
 
          // Themed override like --dark-lg
          if (rawKey.startsWith("--") && rawKey.includes("-")) {
