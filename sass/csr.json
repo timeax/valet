@@ -5,7 +5,9 @@
       "css": "./dist/colors.css",
       "source": "./_colors.scss",
       "type": "tailwind",
-      "themeKeys": ["dark"],
+      "themeKeys": [
+         "dark"
+      ],
       "colorFormat": "oklch"
    },
    "media": {
@@ -23,9 +25,11 @@
       "type": "tailwind",
       "useSass": false
    },
-   "fonts": {
-      "primary": "Inter, sans-serif",
-      "secondary": "Roboto, sans-serif"
+   "extra": {
+      "font": {
+         "sans": "'Inter, sans-serif'",
+         "secondary": "Roboto, sans-serif"
+      }
    },
    "watch": false
 }

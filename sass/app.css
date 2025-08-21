@@ -11,4 +11,6 @@
 	--color-primary-40: oklch(0.5623 0.1255 21.9132);
 	--color-primary-30: oklch(0.0482 0.0283 264.052);
 	--color-primary-red: var(--primary-red);
+	--font-sans: "Inter, sans-serif";
+	--font-secondary: Roboto, sans-serif;
 }
