@@ -139,73 +139,154 @@ function normalizeCssValue(input: unknown): string {
    return s;
 }
 
-/**
- * Build CSS blocks for "extra" theme tokens (fonts, radius, etc.)
- * Rules:
- *  - key "default" => omit suffix (e.g., --radius, --font)
- *  - "#suffix"     => promote to :root and @theme uses var(--...)
- *  - "--<theme>-suffix" (known theme) => .<theme> override; also @theme uses var(--...)
- *  - unknown theme prefixes keep the raw name (no stripping) and are literals in @theme
- */
-function buildExtrasCss(
-   extra: Record<string, Record<string, string>>,
+// Deep-nesting aware extras builder
+// - Keys can be nested arbitrarily: { group: { a: { b: value } } }
+// - "#segment" promotes that branch to :root
+// - "--<theme>-suffix" (leaf) writes a .<theme> override for known themes
+// - "default" suffix is omitted from the var name
+// - Unknown theme keys keep their raw name in @theme to avoid collisions
+// - At the end, if a var has a known themed override OR was promoted, @theme maps it to var(--name), else literal
+//
+export function buildExtrasCss(
+   extra: Record<string, any>,
    themeKeys: string[] = []
 ): string {
-   const root: string[] = [];
-   const themes: Record<string, string[]> = {};
-   const atTheme: string[] = [];
    const themeSet = new Set(themeKeys);
 
-   for (const group of Object.keys(extra)) {
-      const entries = extra[group]; // e.g. { default: '...', lg: '...', '#sm': '...', '--dark-lg': '...' }
+   // State we collect
+   const rootVars = new Map<string, string>();                   // --name -> value
+   const baseVars = new Map<string, string>();                   // --name -> value (for @theme)
+   const themedOverrides: Record<string, Map<string, string>> = {}; // theme -> (--name -> value)
+   const hasKnownThemeOverride = new Set<string>();              // --name set
+   const promotedNames = new Set<string>();                      // --name set
 
-      for (const rawKey of Object.keys(entries)) {
-         const val = normalizeCssValue(entries[rawKey]);
+   // helpers
+   const join = (parts: string[]) => parts.filter(Boolean).join("-");
+   const varName = (group: string, segs: string[]) =>
+      `--${group}${segs.length ? `-${join(segs)}` : ""}`;
 
-         // Themed override like --dark-lg
-         if (rawKey.startsWith("--") && rawKey.includes("-")) {
-            const after = rawKey.slice(2); // "dark-lg"
+   const isPlainObject = (v: any) =>
+      v && typeof v === "object" && !Array.isArray(v);
+
+   // record themed override (known themes only)
+   function addThemeOverride(theme: string, name: string, value: string) {
+      (themedOverrides[theme] ||= new Map()).set(name, value);
+      hasKnownThemeOverride.add(name);
+   }
+
+   // recursive walker per top-level group
+   function walk(
+      group: string,
+      node: any,
+      path: string[] = [],
+      promoted: boolean = false
+   ) {
+      if (!isPlainObject(node)) {
+         // leaf at group root (rare): treat as default
+         const v = normalizeCssValue(String(node));
+         const name = varName(group, []);
+         baseVars.set(name, v);
+         if (promoted) {
+            rootVars.set(name, v);
+            promotedNames.add(name);
+         }
+         return;
+      }
+
+      for (const rawKey of Object.keys(node)) {
+         const val = node[rawKey];
+
+         // Handle themed override keys at ANY depth: "--dark-<suffix>"
+         if (typeof val !== "object" && rawKey.startsWith("--") && rawKey.includes("-")) {
+            const after = rawKey.slice(2); // "dark-lg" | "dark-default"
             const dash = after.indexOf("-");
             if (dash > 0) {
                const theme = after.slice(0, dash);
-               const suffix = after.slice(dash + 1); // "lg" or "default"
-               const name = suffix === "default" ? `--${group}` : `--${group}-${suffix}`;
+               const suffix = after.slice(dash + 1); // "lg" | "default"
+               const finalSegs = [...path, ...(suffix === "default" ? [] : [suffix])];
+               const name = varName(group, finalSegs);
+               const css = normalizeCssValue(String(val));
+
                if (themeSet.has(theme)) {
-                  (themes[theme] ||= []).push(`${name}: ${val};`);
-                  // ensure alias present (var-backed)
-                  atTheme.push(`--${group}${suffix === "default" ? "" : `-${suffix}`}: var(${name});`);
+                  addThemeOverride(theme, name, css);
                } else {
-                  // unknown theme → keep raw in name (no stripping)
-                  const kept = `--${group}-${rawKey}`;
-                  atTheme.push(`${kept}: ${val};`);
+                  // Unknown theme → keep raw themed key in the name to avoid collisions
+                  const keptName = varName(group, [...path, rawKey]); // rawKey still includes "--theme-..."
+                  baseVars.set(keptName, css);
                }
                continue;
             }
          }
 
-         // non-themed
-         const isRootFlag = rawKey.startsWith("#");
-         const key = isRootFlag ? rawKey.slice(1) : rawKey;
-         const name = key === "default" ? `--${group}` : `--${group}-${key}`;
+         // Check segment promotion with "#"
+         let seg = rawKey;
+         let segPromote = false;
+         if (seg.startsWith("#")) {
+            segPromote = true;
+            seg = seg.slice(1);
+         }
 
-         if (isRootFlag) root.push(`${name}: ${val};`);
+         // Omit "default" from the path
+         const nextPath = seg === "default" ? path : [...path, seg];
 
-         // @theme alias: var(...) if promoted, else literal
-         const themeName = `--${group}${key === "default" ? "" : `-${key}`}`;
-         if (isRootFlag) {
-            atTheme.push(`${themeName}: var(${name});`);
+         if (isPlainObject(val)) {
+            // Recurse
+            walk(group, val, nextPath, promoted || segPromote);
          } else {
-            atTheme.push(`${themeName}: ${val};`);
+            // Leaf
+            const css = normalizeCssValue(String(val));
+            const name = varName(group, nextPath);
+
+            // Record base literal
+            baseVars.set(name, css);
+
+            // Promotion → :root
+            if (promoted || segPromote) {
+               rootVars.set(name, css);
+               promotedNames.add(name);
+            }
          }
       }
    }
 
-   const blocks: string[] = [];
-   if (root.length) blocks.push(`:root {\n  ${root.join("\n  ")}\n}`);
-   for (const t of Object.keys(themes)) {
-      blocks.push(`.${t} {\n  ${themes[t].join("\n  ")}\n}`);
+   // Traverse each top-level group
+   for (const group of Object.keys(extra || {})) {
+      walk(group, extra[group], [], false);
    }
-   if (atTheme.length) blocks.push(`@theme {\n  ${atTheme.join("\n  ")}\n}`);
+
+   // Decide @theme aliasing vs literal:
+   // If a name is promoted OR it has a known themed override → use var(--name)
+   const atThemeLines: string[] = [];
+   for (const [name, css] of baseVars) {
+      if (promotedNames.has(name) || hasKnownThemeOverride.has(name)) {
+         atThemeLines.push(`${name}: var(${name});`);
+      } else {
+         atThemeLines.push(`${name}: ${css};`);
+      }
+   }
+
+   // Emit blocks
+   const blocks: string[] = [];
+
+   // :root
+   if (rootVars.size) {
+      const lines = Array.from(rootVars.entries()).map(([n, v]) => `${n}: ${v};`);
+      blocks.push(`:root {\n  ${lines.join("\n  ")}\n}`);
+   }
+
+   // themed overrides
+   for (const theme of Object.keys(themedOverrides)) {
+      const lines = Array.from(themedOverrides[theme].entries()).map(([n, v]) => `${n}: ${v};`);
+      if (lines.length) {
+         blocks.push(`.${theme} {\n  ${lines.join("\n  ")}\n}`);
+      }
+   }
+
+   // @theme
+   if (atThemeLines.length) {
+      blocks.push(`@theme {\n  ${atThemeLines.join("\n  ")}\n}`);
+   }
+
    return blocks.join("\n\n");
 }
 
