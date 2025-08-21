@@ -55,23 +55,21 @@ $s_theme_keys: ${themeList} !default;
   @each $key, $val in $map {
     $k: s_str($key);
 
-    // (0) top-level themed override: --dark-name: value (rare; kept for completeness)
+    // (0) top-level themed override: --dark-name: value
     @if s_starts_with($k, "--") and s_contains($k, "-") and meta.type-of($val) != 'map' {
       $tmp: s_after($k, "--");           // "dark-name"
       $dash: s_first_dash($tmp);
       @if $dash != null {
         $theme: string.slice($tmp, 1, $dash - 1);
-        $nameRest: string.slice($tmp, $dash + 1); // "name"
+        $nameRest: string.slice($tmp, $dash + 1); // e.g. "primary" or "primary-600"
         @if list.index($s_theme_keys, $theme) {
           $set: map.get($theme-vars, $theme);
-          @if $set == null {
-            $set: ();
-          }
+          @if $set == null { $set: (); }
           $set: map.merge($set, ( $nameRest: $val ));
           $theme-vars: map.merge($theme-vars, ( $theme: $set ));
           $needs-root: s_set_put($needs-root, $nameRest);
         } @else {
-          // unknown theme → keep full key as literal base value
+          // unknown theme → keep full key as literal base value (no stripping)
           $base-values: map.merge($base-values, ( $k: $val ));
         }
       }
@@ -82,12 +80,9 @@ $s_theme_keys: ${themeList} !default;
     @if meta.type-of($val) != 'map' {
       $name: $k;
       $flagged: false;
-      @if s_starts_with($name, "#") {
-        $flagged: true;
-        $name: s_after($name, "#");
-      }
+      @if s_starts_with($name, "#") { $flagged: true; $name: s_after($name, "#"); }
 
-      // record base value for @theme
+      // record base value for @theme (name comes from key, NEVER from value)
       $base-values: map.merge($base-values, ( $name: $val ));
 
       // promote to :root only if flagged OR required by known theme overrides
@@ -97,13 +92,10 @@ $s_theme_keys: ${themeList} !default;
       @continue;
     }
 
-    // (2) map palette (with shades and/or themed entries)
+    // (2) palette map (with shades and/or themed entries)
     $pname: $k;
     $all-to-root: false;
-    @if s_starts_with($pname, "#") {
-      $all-to-root: true;
-      $pname: s_after($pname, "#");
-    }
+    @if s_starts_with($pname, "#") { $all-to-root: true; $pname: s_after($pname, "#"); }
 
     @each $shadeKey, $shadeVal in $val {
       $skey: s_str($shadeKey);
@@ -119,33 +111,29 @@ $s_theme_keys: ${themeList} !default;
           $varName: if($shade == "default", $pname, $pname + "-" + $shade);
           @if list.index($s_theme_keys, $theme) {
             $set: map.get($theme-vars, $theme);
-            @if $set == null {
-              $set: ();
-            }
+            @if $set == null { $set: (); }
             $set: map.merge($set, ( $varName: $shadeVal ));
             $theme-vars: map.merge($theme-vars, ( $theme: $set ));
             $needs-root: s_set_put($needs-root, $varName);
           } @else {
-            // unknown theme → keep original themed key in the name
+            // unknown theme inside palette → keep the original themed key in the name
+            // so it cannot collide with normal palette-shade names
             $keptName: $pname + "-" + $skey; // e.g. "danger---weird-50"
             $base-values: map.merge($base-values, ( $keptName: $shadeVal ));
           }
         }
       } @else {
-        // regular shade (may be "#"-flagged)
+        // regular shade; may be "#"-flagged
         $shadeFlagged: false;
-        @if s_starts_with($skey, "#") {
-          $shadeFlagged: true;
-          $skey: s_after($skey, "#");
-        }
+        @if s_starts_with($skey, "#") { $shadeFlagged: true; $skey: s_after($skey, "#"); }
 
-        // normalize "default" → base name (no suffix)
+        // normalize "default" → base name (no "-default")
         $varName: if($skey == "default", $pname, $pname + "-" + $skey);
 
         // record base for @theme
         $base-values: map.merge($base-values, ( $varName: $shadeVal ));
 
-        // promote if palette flagged, shade flagged, or required by known theme override
+        // promote if palette flagged, shade flagged, or required by theme override
         @if $all-to-root or $shadeFlagged or s_set_has($needs-root, $varName) {
           $root-vars: map.merge($root-vars, ( $varName: $shadeVal ));
         }
@@ -153,20 +141,20 @@ $s_theme_keys: ${themeList} !default;
     }
   }
 
-  // ---- normalize any "*-default" keys in $base-values and $root-vars ----
-  $__norm_base: ();
-  @each $name, $value in $base-values {
-    $__norm_base: map.merge($__norm_base, ( s_trim_default($name): $value ));
-  }
-  $base-values: $__norm_base;
-
-  $__norm_root: ();
+  // ---- clean empties (defensive: avoid "--foo: ;") ----
+  $__clean_root: ();
   @each $name, $value in $root-vars {
-    $__norm_root: map.merge($__norm_root, ( s_trim_default($name): $value ));
+    @if $value != null and $value != "" { $__clean_root: map.merge($__clean_root, ($name: $value)); }
   }
-  $root-vars: $__norm_root;
+  $root-vars: $__clean_root;
 
-  // ensure every var with a known theme override is promoted to :root (order independent)
+  $__clean_base: ();
+  @each $name, $value in $base-values {
+    @if $value != null and $value != "" { $__clean_base: map.merge($__clean_base, ($name: $value)); }
+  }
+  $base-values: $__clean_base;
+
+  // ensure every var with a known theme override is promoted to :root
   @each $name, $flag in $needs-root {
     @if not map.has-key($root-vars, $name) and map.has-key($base-values, $name) {
       $root-vars: map.merge($root-vars, ($name: map.get($base-values, $name)));

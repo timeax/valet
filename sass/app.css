@@ -1,16 +1,36 @@
 :root {
-	--primary: oklch(0.6999 0.1368 261.7225);
-	--primary-red: oklch(0.5181 0.1946 27.457 / 0.189);
+	--theme-50: oklch(0.9841 0.0137 191.4022);
+	--theme-100: oklch(0.9526 0.0463 189.7598);
+	--theme-200: oklch(0.9094 0.0861 190.3057);
+	--theme-300: oklch(0.8534 0.1167 192.4629);
+	--theme-400: oklch(0.7809 0.1241 194.9115);
+	--theme-500: oklch(0.6937 0.1147 196.2991);
+	--theme-600: oklch(0.6363 0.1055 198.9109);
+	--theme-700: oklch(0.4972 0.0804 199.4352);
+	--theme-800: oklch(0.4189 0.0646 202.3977);
+	--theme-900: oklch(0.3761 0.055 200.4267);
+	--theme-950: oklch(0.2619 0.0407 205.5939);
+	--theme: oklch(0.6363 0.1055 198.9109);
+	--primary: oklch(0.6363 0.1055 198.9109);
 }
 .dark {
-	--primary-red: oklch(0.5181 0.1946 27.457 / 0.189);
+	--primary: oklch(0.6363 0.1055 198.9109);
 }
 @theme {
+	--color-theme-50: var(--theme-50);
+	--color-theme-100: var(--theme-100);
+	--color-theme-200: var(--theme-200);
+	--color-theme-300: var(--theme-300);
+	--color-theme-400: var(--theme-400);
+	--color-theme-500: var(--theme-500);
+	--color-theme-600: var(--theme-600);
+	--color-theme-700: var(--theme-700);
+	--color-theme-800: var(--theme-800);
+	--color-theme-900: var(--theme-900);
+	--color-theme-950: var(--theme-950);
+	--color-theme: var(--theme);
 	--color-primary: var(--primary);
-	--color-primary-100: oklch(0.7409 0.0976 283.763);
-	--color-primary-40: oklch(0.5623 0.1255 21.9132);
-	--color-primary-30: oklch(0.0482 0.0283 264.052);
-	--color-primary-red: var(--primary-red);
+	--color---dark-primary: oklch(0.6363 0.1055 198.9109);
 	--font-sans: "Inter, sans-serif";
 	--font-secondary: Roboto, sans-serif;
 	--radius: 0.25rem;

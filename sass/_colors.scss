@@ -1,10 +1,22 @@
-$colors: (
-   primary: (
-      #default: #6e9df3,
-      100: rgb(163, 163, 231),
-      40: rgb(179, 83, 83),
-      30: rgb(0, 0, 4),
-      red: rgba(191, 30, 30, 0.189),
-      --dark-red: rgba(191, 30, 30, 0.189),
-   ),
+$theme-default: #129ea3;
+$theme-colors: (
+    50: #f0fdfc,
+    100: #cdfaf6,
+    200: #9bf4ee,
+    300: #61e7e3,
+    400: #31d0d0,
+    500: #18b2b4,
+    600: $theme-default,
+    700: #117074,
+    800: #13575c,
+    900: #144a4d,
+    950: #052a2e,
+    default: $theme-default
 );
+
+$colors: (
+    #theme: $theme-colors,
+    primary: map.get($theme-colors, default),
+    --dark-primary: map.get($theme-colors, 600),
+);
+
