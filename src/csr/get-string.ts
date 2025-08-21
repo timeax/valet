@@ -17,23 +17,30 @@ $s_theme_keys: ${themeList} !default;
 
 // stringify any value
 @function s_str($v) { @return #{$v}; }
+
 // starts-with
 @function s_starts_with($s, $prefix) { @return string.index($s, $prefix) == 1; }
+
 // substring after prefix
 @function s_after($s, $prefix) { @return string.slice($s, string.length($prefix) + 1); }
+
 // contains
 @function s_contains($s, $needle) { @return string.index($s, $needle) != null; }
+
 // first dash index
 @function s_first_dash($s) { @return string.index($s, "-"); }
+
 // ends-with (for "-default")
 @function s_ends_with($s, $suffix) {
   $i: string.index($s, $suffix);
   @return $i != null and $i == string.length($s) - string.length($suffix) + 1;
 }
+
 // trim trailing "-default"
 @function s_trim_default($name) {
   @return if(s_ends_with($name, "-default"), string.slice($name, 1, string.length($name) - 8), $name);
 }
+
 // maps-as-sets helpers
 @function s_set_put($set, $key) { @return map.merge($set, ( $key: true )); }
 @function s_set_has($set, $key) { @return map.has-key($set, $key); }
@@ -56,7 +63,10 @@ $s_theme_keys: ${themeList} !default;
         $theme: string.slice($tmp, 1, $dash - 1);
         $nameRest: string.slice($tmp, $dash + 1); // "name"
         @if list.index($s_theme_keys, $theme) {
-          $set: map.get($theme-vars, $theme); @if $set == null { $set = (); }
+          $set: map.get($theme-vars, $theme);
+          @if $set == null {
+            $set: ();
+          }
           $set: map.merge($set, ( $nameRest: $val ));
           $theme-vars: map.merge($theme-vars, ( $theme: $set ));
           $needs-root: s_set_put($needs-root, $nameRest);
@@ -72,7 +82,10 @@ $s_theme_keys: ${themeList} !default;
     @if meta.type-of($val) != 'map' {
       $name: $k;
       $flagged: false;
-      @if s_starts_with($name, "#") { $flagged = true; $name: s_after($name, "#"); }
+      @if s_starts_with($name, "#") {
+        $flagged: true;
+        $name: s_after($name, "#");
+      }
 
       // record base value for @theme
       $base-values: map.merge($base-values, ( $name: $val ));
@@ -87,7 +100,10 @@ $s_theme_keys: ${themeList} !default;
     // (2) map palette (with shades and/or themed entries)
     $pname: $k;
     $all-to-root: false;
-    @if s_starts_with($pname, "#") { $all-to-root = true; $pname: s_after($pname, "#"); }
+    @if s_starts_with($pname, "#") {
+      $all-to-root: true;
+      $pname: s_after($pname, "#");
+    }
 
     @each $shadeKey, $shadeVal in $val {
       $skey: s_str($shadeKey);
@@ -102,7 +118,10 @@ $s_theme_keys: ${themeList} !default;
           // normalize "default" → base name (no suffix)
           $varName: if($shade == "default", $pname, $pname + "-" + $shade);
           @if list.index($s_theme_keys, $theme) {
-            $set: map.get($theme-vars, $theme); @if $set == null { $set = (); }
+            $set: map.get($theme-vars, $theme);
+            @if $set == null {
+              $set: ();
+            }
             $set: map.merge($set, ( $varName: $shadeVal ));
             $theme-vars: map.merge($theme-vars, ( $theme: $set ));
             $needs-root: s_set_put($needs-root, $varName);
@@ -115,7 +134,10 @@ $s_theme_keys: ${themeList} !default;
       } @else {
         // regular shade (may be "#"-flagged)
         $shadeFlagged: false;
-        @if s_starts_with($skey, "#") { $shadeFlagged = true; $skey: s_after($skey, "#"); }
+        @if s_starts_with($skey, "#") {
+          $shadeFlagged: true;
+          $skey: s_after($skey, "#");
+        }
 
         // normalize "default" → base name (no suffix)
         $varName: if($skey == "default", $pname, $pname + "-" + $skey);

@@ -3,3 +3,4 @@ dist
 sass
 scss
 /dist
+/node_modules
