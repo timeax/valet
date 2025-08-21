@@ -1,3 +1,5 @@
+@use "sass:map";
+
 $theme-default: #129ea3;
 $theme-colors: (
     50: #f0fdfc,
@@ -11,12 +13,75 @@ $theme-colors: (
     800: #13575c,
     900: #144a4d,
     950: #052a2e,
-    default: $theme-default
+    default: $theme-default,
+    foreground: black,
 );
+
+$danger-default: #e6443a;
+
+$destructive: (
+    50: #fef3f2,
+    100: #fde5e3,
+    200: #fccfcc,
+    300: #f9ada8,
+    400: #f37d76,
+    500: $danger-default,
+    600: #d5372d,
+    700: #b32a22,
+    800: #942720,
+    900: #7b2621,
+    950: #430f0c,
+    default: $danger-default,
+    foreground: #fcfcfc,
+);
+
 
 $colors: (
     #theme: $theme-colors,
-    primary: map.get($theme-colors, default),
-    --dark-primary: map.get($theme-colors, 600),
+    destructive: $destructive,
+    #primary: map.get($theme-colors, 500),
+    #chart: (
+        1: oklch(0.64 0.12 190),
+        2: oklch(0.70 0.10 165),
+        3: oklch(0.58 0.09 210),
+        4: oklch(0.80 0.14 85),
+        5: oklch(0.74 0.13 35),
+        bar: (
+            1: oklch(0.64 0.12 190),
+            2: oklch(0.70 0.10 165),
+            3: oklch(0.58 0.09 210),
+            4: oklch(0.80 0.14 85),
+            5: oklch(0.74 0.13 35),
+        )
+    ),
+    #sidebar: (
+        base: oklch(0.22 0.04 210),
+        foreground: oklch(0.96 0 0),
+        primary: oklch(0.64 0.12 190),
+        primary-foreground: oklch(0.99 0 0),
+        accent: oklch(0.28 0.04 200),
+        accent-foreground: oklch(0.96 0 0),
+        border: oklch(0.28 0.02 210),
+        ring: oklch(0.70 0.08 190),
+    ),
+    #strokes: (
+        border: oklch(0.90 0.01 210),
+        input: oklch(0.92 0.01 210),
+        ring: oklch(0.78 0.05 190),
+    ),
+    #surfaces: (
+        card: oklch(0.93 0.01 202.05),
+        card-foreground: var(--foreground),
+        popover: oklch(0.93 0.01 202.05), 
+        popover-foreground: var(--foreground),
+    ),
+    #tones: (
+        secondary: oklch(0.93 0.02 190),
+        secondary-foreground: oklch(0.28 0.03 210),
+        muted: oklch(0.92 0.015 210),
+        muted-foreground: oklch(0.55 0.02 220),
+        accent: oklch(0.95 0.03 180),
+        accent-foreground: oklch(0.28 0.03 210),
+    ),
 );
 
