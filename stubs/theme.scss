@@ -7,12 +7,12 @@
 
 // join path + segment with "-" (skip empty bits)
 @function s_join($a, $b) {
-  @if $a == null or $a == "" { @return $b; }
-  @if $b == null or $b == "" { @return $a; }
+  @if ($a == null or $a == "") { @return $b; }
+  @if ($b == null or $b == "") { @return $a; }
   @return $a + "-" + $b;
 }
 
-// normalize trailing "-default" away (e.g. "theme-default" -> "theme")
+// remove trailing "-default" (e.g. "theme-default" -> "theme")
 @function s_trim_default($name) {
   @if $name == null { @return $name; }
   $suffix: "-default";
@@ -23,200 +23,187 @@
   @return $name;
 }
 
-// ---------- set helpers ----------
+// ---------- set/map helpers ----------
 @function s_set_put($set, $key) { @return map.merge($set, ( $key: true )); }
 @function s_set_has($set, $key) { @return map.has-key($set, $key); }
 
-// ---------- global state ----------
-$g_root-vars: () !default;   // name -> value (for :root)
-$g_theme-vars: () !default;  // theme -> (name -> value)
-$g_base-values: () !default; // name -> value (for @theme)
-$g_needs-root: () !default;  // set(name) that must be promoted to :root
-
-// is this safe to emit as a CSS value?
 @function s_is_scalar($v) {
   $t: meta.type-of($v);
   @return $v != null and $v != "" and $t != 'map';
 }
 
-// helper: does a logical name still contain a raw themed token like "--dark-5"?
-@function s_has_raw_theme_token($name) {
-  @return s_contains($name, "--");
-}
+@function s_has_raw_theme_token($name) { @return s_contains($name, "--"); }
+
+// ---------- global state ----------
+// These are intentionally simple: one pass collects everything.
+$g_base: () !default;        // name -> scalar value (includes defaults)
+$g_root: () !default;        // set(name) that must be promoted to :root
+$g_themes: () !default;      // theme -> (name -> scalar value)
+
+// Known theme keys must be provided by wrapper before including this file:
+// $s_theme_keys: ('dark', 'light', ...)
 
 // ---------- recursive collector ----------
-// $path: hyphen-joined logical name
-// $promote: true if any ancestor had a "#" flag
 @mixin s_collect($mapVal, $path: "", $promote: false) {
   @each $rawKey, $val in $mapVal {
     $k: s_str($rawKey);
 
-    // Themed override like "--dark-foo" (or "--dark-50"/"--dark-default") at ANY depth (scalar only)
+    // Theme override at any depth: --dark-<suffix> (suffix can be "default", "50", "foo", etc.)
     @if s_starts_with($k, "--") and s_contains($k, "-") and meta.type-of($val) != 'map' {
-      $tmp: s_after($k, "--");
+      $tmp: s_after($k, "--");            // e.g. "dark-default", "dark-5"
       $dash: s_first_dash($tmp);
       @if $dash != null {
         $theme: string.slice($tmp, 1, $dash - 1);
-        $rest: string.slice($tmp, $dash + 1); // "foo" | "50" | "default"
+        $rest: string.slice($tmp, $dash + 1);
         $namePart: if($rest == "default", "", $rest);
-        $varName: s_trim_default(s_join($path, $namePart));
+        $varName: s_trim_default(s_join($path, $namePart)); // default → base name
+
         @if list.index($s_theme_keys, $theme) {
-          // known theme → record override + mark base for promotion
-          $set: map.get($g_theme-vars, $theme);
-          @if $set == null { $set: (); }
-          $set: map.merge($set, ( $varName: $val ));
-          $g_theme-vars: map.merge($g_theme-vars, ( $theme: $set )) !global;
+          // record theme override under the cleaned logical name
+          $bucket: map.get($g_themes, $theme);
+          @if $bucket == null { $bucket: (); }
+          $bucket: map.merge($bucket, ( $varName: $val ));
+          $g_themes: map.merge($g_themes, ( $theme: $bucket )) !global;
 
-          $g_needs-root: s_set_put($g_needs-root, $varName) !global;
+          // any override means the base must be present in :root
+          $g_root: s_set_put($g_root, $varName) !global;
 
-          // ensure a base entry exists for @theme output
-          @if not map.has-key($g_base-values, $varName) {
-            $g_base-values: map.merge($g_base-values, ( $varName: $val )) !global;
+          // ensure a base exists (collector will also add if a default leaf exists)
+          @if not map.has-key($g_base, $varName) {
+            $g_base: map.merge($g_base, ( $varName: $val )) !global;
           }
         } @else {
-          // unknown theme → keep raw themed key in the name (to avoid collisions)
-          // will be removed during cleaning for :root/@theme
+          // unknown theme: keep the raw name ONLY in base so @theme can expose it literally
+          // (never promote to :root)
           $kept: s_join($path, $k); // e.g. "chart---weird-5"
-          $g_base-values: map.merge($g_base-values, ( $kept: $val )) !global;
+          @if not map.has-key($g_base, $kept) {
+            $g_base: map.merge($g_base, ( $kept: $val )) !global;
+          }
         }
       }
       @continue;
     }
 
-    // segment-level "#" promotion
+    // segment-level "#" forces promotion for this subtree
     $segPromote: false;
     @if s_starts_with($k, "#") {
       $segPromote: true;
       $k: s_after($k, "#");
     }
 
-    // nested map → recurse
+    // Nested map → recurse. "default" means "don’t extend the path".
     @if meta.type-of($val) == 'map' {
       $nextPath: if($k == "default", $path, s_join($path, $k));
       @include s_collect($val, $nextPath, $promote or $segPromote);
       @continue;
     }
 
-    // leaf scalar
+    // Leaf scalar
     $leafName: if($k == "default", $path, s_join($path, $k));
-    @if $leafName != null and $leafName != "" {
-      $g_base-values: map.merge($g_base-values, ( $leafName: $val )) !global;
 
-      // promote to :root if any ancestor (or this segment) had '#'
+    // store base literal for this logical name (handles "default" properly)
+    @if $leafName != null and $leafName != "" and s_is_scalar($val) {
+      $g_base: map.merge($g_base, ( $leafName: $val )) !global;
+      // promote to :root if any ancestor requested promotion
       @if $promote or $segPromote {
-        $g_root-vars: map.merge($g_root-vars, ( $leafName: $val )) !global;
+        $g_root: s_set_put($g_root, $leafName) !global;
       }
     }
   }
 }
 
-// Promote anything with a known theme override (first pass uses explicit marks)
-@mixin s_finalize_promotions() {
-  @each $name, $flag in $g_needs-root {
-    @if not map.has-key($g_root-vars, $name) and map.has-key($g_base-values, $name) {
-      $g_root-vars: map.merge($g_root-vars, ($name: map.get($g_base-values, $name))) !global;
+// ---------- cleaning ----------
+@mixin s_clean() {
+  // Drop any non‑scalars and any names that still contain raw theme tokens.
+  $__base: ();
+  @each $name, $value in $g_base {
+    @if s_is_scalar($value) and not s_has_raw_theme_token($name) {
+      $__base: map.merge($__base, ($name: $value));
     }
   }
-}
+  $g_base: $__base !global;
 
-// SAFETY PASS: also promote every name that appears in $g_theme-vars
-@mixin s_repair_promotions_from_theme_vars() {
-  @each $theme, $vars in $g_theme-vars {
-    @each $name, $value in $vars {
-      @if not map.has-key($g_root-vars, $name) and map.has-key($g_base-values, $name) {
-        $g_root-vars: map.merge($g_root-vars, ($name: map.get($g_base-values, $name))) !global;
+  $__root: ();
+  @each $name, $flag in $g_root {
+    @if not s_has_raw_theme_token($name) and map.has-key($g_base, $name) {
+      $__root: map.merge($__root, ($name: true));
+    }
+  }
+  $g_root: $__root !global;
+
+  // theme maps keep only scalars; their names have already been normalized
+  $__themes: ();
+  @each $theme, $vars in $g_themes {
+    $__t: ();
+    @each $n, $v in $vars {
+      @if s_is_scalar($v) and not s_has_raw_theme_token($n) {
+        $__t:map.merge($__t, ($n: $v));
       }
     }
+    $__themes: map.merge($__themes, ($theme: $__t));
   }
+  $g_themes: $__themes !global;
 }
 
-// Make sure @theme has entries for anything we promote into :root
-@mixin s_sync_base_from_roots() {
-  @each $name, $value in $g_root-vars {
-    @if not map.has-key($g_base-values, $name) and s_is_scalar($value) {
-      $g_base-values: map.merge($g_base-values, ($name: $value)) !global;
-    }
-  }
-}
-
-// ---- CLEAN EMPTIES / STRIP RAW THEME TOKENS ----
-@mixin s_clean_state() {
-  // clean :root candidates (drop raw themed names entirely)
-  $__clean_root: ();
-  @each $name, $value in $g_root-vars {
-    @if s_is_scalar($value) and not s_has_raw_theme_token($name) {
-      $__clean_root: map.merge($__clean_root, ($name: $value));
-    }
-  }
-  $g_root-vars: $__clean_root !global;
-
-  // clean base values AND drop any logical names that still contain "--"
-  $__clean_base: ();
-  @each $name, $value in $g_base-values {
-    @if s_is_scalar($value) and not s_has_raw_theme_token($name) {
-      $__clean_base: map.merge($__clean_base, ($name: $value));
-    }
-  }
-  $g_base-values: $__clean_base !global;
-}
-
-// Emit blocks (order: :root → theme classes → @theme)
+// ---------- emit ----------
 @mixin s_emit() {
+  // 1) :root — only promoted names
   :root {
-    @each $name, $value in $g_root-vars {
-      @if s_is_scalar($value) { --#{$name}: #{$value}; }
+    @each $name, $flag in $g_root {
+      --#{$name}: #{map.get($g_base, $name)};
     }
   }
 
-  @each $theme, $vars in $g_theme-vars {
+  // 2) Theme classes
+  @each $theme, $vars in $g_themes {
     .#{$theme} {
       @each $name, $value in $vars {
-        @if s_is_scalar($value) { --#{$name}: #{$value}; }
+        --#{$name}: #{$value};
       }
     }
   }
 
-  // IMPORTANT: iterate over the union of names to guarantee defaults appear
-  $__all: $g_base-values;
-  @each $n, $v in $g_root-vars {
-    @if not map.has-key($__all, $n) and s_is_scalar($v) {
-      $__all: map.merge($__all, ($n: $v));
+  // 3) @theme — union of base names and themed names
+  // Build the union of names we must expose
+  $__all: $g_base;
+  @each $theme, $vars in $g_themes {
+    @each $n, $v in $vars {
+      @if not map.has-key($__all, $n) {
+        // Prefer base if present; else fall back to the theme value so something exists
+        $__all: map.merge($__all, ($n: $v));
+      }
     }
   }
 
   @theme {
     @each $name, $value in $__all {
-      @if map.has-key($g_root-vars, $name) {
+      @if map.has-key($g_root, $name) {
         --color-#{$name}: var(--#{$name});
-      } @else if s_is_scalar($value) {
+      } @else {
         --color-#{$name}: #{$value};
       }
-      // names with raw "--" were removed during cleaning
     }
   }
 }
 
-// Public entry
+// ---------- public entry ----------
 @mixin s_walk_colors($rootMap) {
   // reset
-  $g_root-vars: () !global;
-  $g_theme-vars: () !global;
-  $g_base-values: () !global;
-  $g_needs-root: () !global;
+  $g_base: () !global;
+  $g_root: () !global;
+  $g_themes: () !global;
 
-  // collect
+  // collect deep
   @include s_collect($rootMap, "", false);
 
-  // promote and repair
-  @include s_finalize_promotions();
-  @include s_repair_promotions_from_theme_vars();
+  // If any name has a known theme override, ensure it is promoted to :root
+  @each $theme, $vars in $g_themes {
+    @each $n, $v in $vars {
+      $g_root: s_set_put($g_root, $n) !global;
+    }
+  }
 
-  // make sure @theme has entries for anything we promoted into :root
-  @include s_sync_base_from_roots();
-
-  // clean
-  @include s_clean_state();
-
-  // emit
+  // clean and emit
+  @include s_clean();
   @include s_emit();
 }

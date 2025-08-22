@@ -10,14 +10,11 @@
 	--theme-800: oklch(0.4189 0.0646 202.3977);
 	--theme-900: oklch(0.3761 0.055 200.4267);
 	--theme-950: oklch(0.2619 0.0407 205.5939);
+	--theme: oklch(0.6363 0.1055 198.9109);
 	--theme-foreground: oklch(0 0 none);
+	--background: oklch(0.98 0.015 190);
 	--background-main: oklch(0.9841 0.0137 191.4022);
 	--primary: oklch(0.6937 0.1147 196.2991);
-	--chart-1: oklch(0.64 0.1105 190);
-	--chart-2: oklch(0.7 0.1 165);
-	--chart-3: oklch(0.58 0.09 210);
-	--chart-4: oklch(0.8 0.14 85);
-	--chart-nest-first: oklch(0.628 0.2577 29.2339);
 	--chart-nest-deep-second: oklch(0.452 0.2656 264.052);
 	--chart-nest-deep-third: oklch(0.5198 0.1768 142.4953);
 	--chart-5: oklch(0.74 0.13 35);
@@ -39,7 +36,9 @@
 	--surfaces-card-foreground: var(--card-foreground);
 	--surfaces-popover: var(--popover);
 	--surfaces-popover-foreground: var(--popover-foreground);
+	--card: oklch(0.93 0.01 202.05);
 	--card-foreground: var(--foreground);
+	--popover: oklch(0.93 0.01 202.05);
 	--popover-foreground: var(--foreground);
 	--tones-secondary: var(--secondary);
 	--tones-secondary-foreground: var(--secondary-foreground);
@@ -47,16 +46,26 @@
 	--tones-muted-foreground: var(--muted-foreground);
 	--tones-accent: var(--accent);
 	--tones-accent-foreground: var(--accent-foreground);
+	--secondary: oklch(0.93 0.02 190);
 	--secondary-foreground: oklch(0.28 0.03 210);
+	--muted: oklch(0.92 0.015 210);
 	--muted-foreground: oklch(0.55 0.02 220);
+	--accent: oklch(0.95 0.03 180);
 	--accent-foreground: oklch(0.28 0.03 210);
 }
 .dark {
 	--background: oklch(0.15 0.02 210);
 	--chart-nest-deep-third: oklch(0.968 0.211 109.7692);
 	--chart-5: oklch(0 0 none);
+	--accent-foreground: oklch(0.9 0.02 200);
 }
 @theme {
+	--font-sans: "Inter, sans-serif";
+	--font-secondary: Roboto, sans-serif;
+	--radius: 0.25rem;
+	--radius-sm: 0.125rem;
+	--radius-lg: 0.5rem;
+	--radius-full: 9999px;
 	--color-theme-50: var(--theme-50);
 	--color-theme-100: var(--theme-100);
 	--color-theme-200: var(--theme-200);
@@ -68,7 +77,9 @@
 	--color-theme-800: var(--theme-800);
 	--color-theme-900: var(--theme-900);
 	--color-theme-950: var(--theme-950);
+	--color-theme: var(--theme);
 	--color-theme-foreground: var(--theme-foreground);
+	--color-background: var(--background);
 	--color-background-main: var(--background-main);
 	--color-foreground: oklch(0.19 0.03 210);
 	--color-destructive-50: oklch(0.9725 0.0119 23.703);
@@ -82,13 +93,14 @@
 	--color-destructive-800: oklch(0.4455 0.146 28.2479);
 	--color-destructive-900: oklch(0.3991 0.1191 27.2186);
 	--color-destructive-950: oklch(0.2595 0.0806 27.4974);
+	--color-destructive: oklch(0.6206 0.2004 28.0131);
 	--color-destructive-foreground: oklch(0.9911 0 none);
 	--color-primary: var(--primary);
-	--color-chart-1: var(--chart-1);
-	--color-chart-2: var(--chart-2);
-	--color-chart-3: var(--chart-3);
-	--color-chart-4: var(--chart-4);
-	--color-chart-nest-first: var(--chart-nest-first);
+	--color-chart-1: oklch(0.64 0.1105 190);
+	--color-chart-2: oklch(0.7 0.1 165);
+	--color-chart-3: oklch(0.58 0.09 210);
+	--color-chart-4: oklch(0.8 0.14 85);
+	--color-chart-nest-first: oklch(0.628 0.2577 29.2339);
 	--color-chart-nest-deep-second: var(--chart-nest-deep-second);
 	--color-chart-nest-deep-third: var(--chart-nest-deep-third);
 	--color-chart-5: var(--chart-5);
@@ -110,7 +122,9 @@
 	--color-surfaces-card-foreground: var(--surfaces-card-foreground);
 	--color-surfaces-popover: var(--surfaces-popover);
 	--color-surfaces-popover-foreground: var(--surfaces-popover-foreground);
+	--color-card: var(--card);
 	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
 	--color-popover-foreground: var(--popover-foreground);
 	--color-tones-secondary: var(--tones-secondary);
 	--color-tones-secondary-foreground: var(--tones-secondary-foreground);
@@ -118,13 +132,10 @@
 	--color-tones-muted-foreground: var(--tones-muted-foreground);
 	--color-tones-accent: var(--tones-accent);
 	--color-tones-accent-foreground: var(--tones-accent-foreground);
+	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
 	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
-	--font-sans: "Inter, sans-serif";
-	--font-secondary: Roboto, sans-serif;
-	--radius: 0.25rem;
-	--radius-sm: 0.125rem;
-	--radius-lg: 0.5rem;
-	--radius-full: 9999px;
 }

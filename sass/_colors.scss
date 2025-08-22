@@ -46,14 +46,14 @@ $colors: (
     foreground: oklch(0.19 0.03 210),
     destructive: $destructive,
     #primary: map.get($theme-colors, 500),
-    #chart: (
+    chart: (
         1: oklch(0.64 0.12 190),
         2: oklch(0.70 0.10 165),
         3: oklch(0.58 0.09 210),
         4: oklch(0.80 0.14 85),
         nest: (
             first: red,
-            deep: (
+            #deep: (
                 second: blue,
                 third: green,
                 --dark-third: yellow
@@ -113,5 +113,6 @@ $colors: (
     #accent: (
         default: oklch(0.95 0.03 180),
         foreground: oklch(0.28 0.03 210),
+        --dark-foreground: oklch(0.90 0.02 200)
     )
 );
