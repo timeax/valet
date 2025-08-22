@@ -1,4 +1,5 @@
 :root {
+	--background: oklch(0.98 0.015 190);
 	--theme-50: oklch(0.9841 0.0137 191.4022);
 	--theme-100: oklch(0.9526 0.0463 189.7598);
 	--theme-200: oklch(0.9094 0.0861 190.3057);
@@ -12,7 +13,6 @@
 	--theme-950: oklch(0.2619 0.0407 205.5939);
 	--theme: oklch(0.6363 0.1055 198.9109);
 	--theme-foreground: oklch(0 0 none);
-	--background: oklch(0.98 0.015 190);
 	--background-main: oklch(0.9841 0.0137 191.4022);
 	--primary: oklch(0.6937 0.1147 196.2991);
 	--chart-nest-deep-second: oklch(0.452 0.2656 264.052);
@@ -60,6 +60,7 @@
 	--accent-foreground: oklch(0.9 0.02 200);
 }
 @theme {
+	--color-background: var(--background);
 	--font-sans: "Inter, sans-serif";
 	--font-secondary: Roboto, sans-serif;
 	--radius: 0.25rem;
@@ -79,7 +80,6 @@
 	--color-theme-950: var(--theme-950);
 	--color-theme: var(--theme);
 	--color-theme-foreground: var(--theme-foreground);
-	--color-background: var(--background);
 	--color-background-main: var(--background-main);
 	--color-foreground: oklch(0.19 0.03 210);
 	--color-destructive-50: oklch(0.9725 0.0119 23.703);
@@ -101,8 +101,6 @@
 	--color-chart-3: oklch(0.58 0.09 210);
 	--color-chart-4: oklch(0.8 0.14 85);
 	--color-chart-nest-first: oklch(0.628 0.2577 29.2339);
-	--color-chart-nest-deep-second: var(--chart-nest-deep-second);
-	--color-chart-nest-deep-third: var(--chart-nest-deep-third);
 	--color-chart-5: var(--chart-5);
 	--color-sidebar-base: var(--sidebar-base);
 	--color-sidebar-foreground: var(--sidebar-foreground);

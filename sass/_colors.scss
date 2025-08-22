@@ -53,7 +53,7 @@ $colors: (
         4: oklch(0.80 0.14 85),
         nest: (
             first: red,
-            #deep: (
+            "!deep": (
                 second: blue,
                 third: green,
                 --dark-third: yellow
