@@ -38,6 +38,12 @@ $destructive: (
 
 $colors: (
     #theme: $theme-colors,
+    background: (
+        default: oklch(0.98 0.015 190),
+        --dark-default: oklch(0.15 0.02 210),
+        #main: map.get($theme-colors, 50)
+    ),
+    foreground: oklch(0.19 0.03 210),
     destructive: $destructive,
     #primary: map.get($theme-colors, 500),
     #chart: (
@@ -45,23 +51,16 @@ $colors: (
         2: oklch(0.70 0.10 165),
         3: oklch(0.58 0.09 210),
         4: oklch(0.80 0.14 85),
+        nest: (
+            first: red,
+            deep: (
+                second: blue,
+                third: green,
+                --dark-third: yellow
+            ),
+        ),
         5: oklch(0.74 0.13 35),
-        bar: (
-            1: oklch(0.64 0.12 190),
-            2: oklch(0.70 0.10 165),
-            3: oklch(0.58 0.09 210),
-            4: oklch(0.80 0.14 85),
-            5: oklch(0.74 0.13 35),
-
-            code: (
-                1: oklch(0.64 0.12 190),
-                2: oklch(0.70 0.10 165),
-                3: oklch(0.58 0.09 210),
-                4: oklch(0.80 0.14 85),
-                5: oklch(0.74 0.13 35),
-                --dark-5: oklch(0.74 0.13 35),
-            )
-        )
+        --dark-5: black
     ),
     #sidebar: (
         base: oklch(0.22 0.04 210),
@@ -74,23 +73,45 @@ $colors: (
         ring: oklch(0.70 0.08 190),
     ),
     #strokes: (
-        border: oklch(0.90 0.01 210),
-        input: oklch(0.92 0.01 210),
-        ring: oklch(0.78 0.05 190),
+        border: var(--border),
+        input: var(--input),
+        ring: var(--ring),
     ),
+    #border: oklch(0.90 0.01 210),
+    #input: oklch(0.92 0.01 210),
+    #ring: oklch(0.78 0.05 190),
     #surfaces: (
-        card: oklch(0.93 0.01 202.05),
-        card-foreground: var(--foreground),
-        popover: oklch(0.93 0.01 202.05), 
-        popover-foreground: var(--foreground),
+        card: var(--card),
+        card-foreground: var(--card-foreground),
+        popover: var(--popover),
+        popover-foreground: var(--popover-foreground),
+    ),
+    #card: (
+        default: oklch(0.93 0.01 202.05),
+        foreground: var(--foreground),
+    ),
+    #popover: (
+        default: oklch(0.93 0.01 202.05), // same as card
+        foreground: var(--foreground),
     ),
     #tones: (
-        secondary: oklch(0.93 0.02 190),
-        secondary-foreground: oklch(0.28 0.03 210),
-        muted: oklch(0.92 0.015 210),
-        muted-foreground: oklch(0.55 0.02 220),
-        accent: oklch(0.95 0.03 180),
-        accent-foreground: oklch(0.28 0.03 210),
+        secondary: var(--secondary),
+        secondary-foreground: var(--secondary-foreground),
+        muted: var(--muted),
+        muted-foreground: var(--muted-foreground),
+        accent: var(--accent),
+        accent-foreground: var(--accent-foreground),
     ),
+    #secondary: (
+        default: oklch(0.93 0.02 190),
+        foreground: oklch(0.28 0.03 210),
+    ),
+    #muted: (
+        default: oklch(0.92 0.015 210),
+        foreground: oklch(0.55 0.02 220),
+    ),
+    #accent: (
+        default: oklch(0.95 0.03 180),
+        foreground: oklch(0.28 0.03 210),
+    )
 );
-
