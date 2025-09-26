@@ -101,7 +101,9 @@ export async function getConfig(sourceDir?: string): Promise<Config | null> {
 
       const content = Fs.content(filePath);
 
-      return fixConfigPaths(JSON.parse(content), sourceDir ?? process.cwd());
+      const config = fixConfigPaths(JSON.parse(content), sourceDir ?? process.cwd());
+      config.configPath = filePath; // Store the path of the config file
+      return config;
    } catch (error) {
       console.error("Failed to retrieve config:", error);
       return null;
@@ -155,7 +157,7 @@ export default function csr(program: Command) {
  * @param config The loaded configuration object.
  */
 function watchConfig(sourceDir: string, config: Config) {
-   const configPath = Fs.fPath("csr.json", sourceDir);
+   const configPath = config.configPath ?? Fs.fPath("csr.json", sourceDir);
 
    // Collect files to watch
    const filesToWatch: string[] = [

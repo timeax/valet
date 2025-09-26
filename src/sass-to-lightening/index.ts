@@ -102,51 +102,117 @@ const processAllFiles = async (init = true): Promise<void> => {
 
 // —————————————————————————————————————————————————————
 // Watcher
-let processingQueue = new Set<string>();
-let debounceTimeout: NodeJS.Timeout | null = null;
-
-const watchFiles = () => {
+const watchFiles = (configPath?: string) => {
   if (!config?.source) {
     console.error('❌ Error: config.source is undefined or invalid.');
     return;
   }
 
-  const watcher = chokidar.watch(config.source, { ignoreInitial: true });
+  // ——— helper: (re)load config and apply side effects
+  const reloadConfig = (why: string) => {
+    try {
+      if (configPath && fs.existsSync(configPath)) {
+        const raw = fs.readFileSync(configPath, 'utf-8');
+        const loaded = JSON.parse(raw);
 
-  watcher.on('all', (event, filePath) => {
-    const rel = path.relative(config.source, filePath);
+        // resolve relative to config file dir
+        const cfgDir = path.dirname(configPath);
+        if (loaded.source) loaded.source = path.resolve(cfgDir, loaded.source);
+        if (loaded.out) loaded.out = path.resolve(cfgDir, loaded.out);
 
-    if (rel.endsWith('.scss') && !isIgnored(config, rel)) {
-      if (event === 'add' || event === 'change') {
-        const fileName = path.basename(rel);
+        const prevSource = config.source;
 
-        if (fileName.startsWith('_')) {
-          console.log(`⚠️ Partial changed: ${rel} → recompiling all (dependency unknown)`);
-          processAllFiles(false);
-          return;
+        Object.assign(config, loaded);
+        normaliseConfig(config);
+
+        // ensure output dir exists
+        if (!fs.existsSync(config.out)) fs.mkdirSync(config.out, { recursive: true });
+
+        // re-init Lightning CSS defaults if targets missing
+        if (!config.targets || Object.keys(config.targets).length === 0) {
+          // best-effort; ignore failure
+          initializeLightningCss(config).catch(() => { });
         }
 
-        processingQueue.add(rel);
-        if (debounceTimeout) clearTimeout(debounceTimeout);
-        debounceTimeout = setTimeout(() => {
-          const queue = Array.from(processingQueue);
-          processingQueue.clear();
-          Promise.all(queue.map(processFile)).catch(() => {});
-        }, 200);
-      } else if (event === 'unlink') {
-        console.log(`🗑️ File removed: ${rel}`);
-        processAllFiles(false);
-      }
-    }
-  });
+        console.log(log(`🔁 Config reloaded (${why}).`));
 
-  watcher.on('error', (error) => {
-    console.error(`Watcher error: ${error.message}`);
-  });
+        // if source changed, re-root scss watcher
+        if (prevSource !== config.source) {
+          console.log(log(`📂 SCSS source changed: "${prevSource}" → "${config.source}"`));
+          scssWatcher?.close().catch(() => { });
+          scssWatcher = chokidar.watch(config.source, { ignoreInitial: true });
+          wireScssWatcher(); // reattach handlers to new watcher
+        }
+
+        // rebuild everything on config change
+        processAllFiles(false).catch(() => { });
+      } else {
+        console.warn(log('⚠️ Config file missing; keeping previous config.'));
+      }
+    } catch (e: any) {
+      console.error(log(`❌ Failed to reload config: ${e.message}`));
+    }
+  };
+
+  // ——— SCSS watcher
+  let scssWatcher = chokidar.watch(config.source, { ignoreInitial: true });
+  let processingQueue = new Set<string>();
+  let debounceTimeout: NodeJS.Timeout | null = null;
+
+  const wireScssWatcher = () => {
+    scssWatcher.on('all', (event, filePath) => {
+      const rel = path.relative(config.source, filePath);
+
+      if (rel.endsWith('.scss') && !isIgnored(config, rel)) {
+        if (event === 'add' || event === 'change') {
+          const fileName = path.basename(rel);
+
+          if (fileName.startsWith('_')) {
+            console.log(`⚠️ Partial changed: ${rel} → recompiling all (dependency unknown)`);
+            processAllFiles(false);
+            return;
+          }
+
+          processingQueue.add(rel);
+          if (debounceTimeout) clearTimeout(debounceTimeout);
+          debounceTimeout = setTimeout(() => {
+            const queue = Array.from(processingQueue);
+            processingQueue.clear();
+            Promise.all(queue.map(processFile)).catch(() => { });
+          }, 200);
+        } else if (event === 'unlink') {
+          console.log(`🗑️ File removed: ${rel}`);
+          processAllFiles(false);
+        }
+      }
+    });
+
+    scssWatcher.on('error', (error) => {
+      console.error(`Watcher error: ${error.message}`);
+    });
+  };
+
+  wireScssWatcher();
+
+  // ——— Config watcher (optional: only if path provided)
+  let cfgWatcher: chokidar.FSWatcher | null = null;
+  if (configPath) {
+    cfgWatcher = chokidar.watch(configPath, { ignoreInitial: true });
+
+    cfgWatcher.on('change', () => reloadConfig('file changed'));
+    cfgWatcher.on('add', () => reloadConfig('file created'));
+    cfgWatcher.on('unlink', () => {
+      console.warn(log('⚠️ Config file deleted; keeping previous in-memory config.'));
+    });
+
+    cfgWatcher.on('error', (error) => {
+      console.error(`Config watcher error: ${error.message}`);
+    });
+  }
 
   console.log(log('👀 Watching for SCSS changes...'));
+  if (configPath) console.log(log(`👀 Watching config: ${configPath}`));
 };
-
 // —————————————————————————————————————————————————————
 // Config loader
 const loadConfig = (configPath: string): boolean => {
@@ -173,15 +239,20 @@ const loadConfig = (configPath: string): boolean => {
 
 // —————————————————————————————————————————————————————
 // Entrypoints
-const start = async (configPath: string | undefined, options: { watch?: boolean }) => {
-  if (configPath) loadConfig(configPath);
-  else loadConfig(path.join(process.cwd(), 'scss.config.json'));
+const start = async (configArg: string | undefined, options: { watch?: boolean }) => {
+  const resolvedCfg = configArg
+    ? path.resolve(process.cwd(), configArg)
+    : path.join(process.cwd(), 'scss.config.json');
 
+  loadConfig(resolvedCfg);          // your existing loader
   await initializeLightningCss(config);
   await processAllFiles();
 
-  if (options.watch) watchFiles();
+  if (options.watch) {
+    watchFiles(resolvedCfg);        // ← pass the path so we can watch it
+  }
 };
+
 
 const createConfig = () => {
   const configFilePath = path.join(process.cwd(), 'scss.config.json');

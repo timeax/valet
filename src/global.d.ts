@@ -33,6 +33,7 @@ interface ExtraConfig {
 
 // config-schema.ts
 interface Config {
+   configPath?: string;
    outFile?: string; // Path to the Tailwind CSS configuration file
    colors?: ColorConfig
    media?: MediaQueryConfig;
