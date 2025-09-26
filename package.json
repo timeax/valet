@@ -9,7 +9,8 @@
     "build": "rm -r dist && cd src && tsc -b && npm run copy",
     "copy": "node ./scripts/query.js",
     "prepublishOnly": "npm run build && npm version patch",
-    "test": "valet colors ./sass/_colors.scss --watch=true"
+    "test": "valet colors ./sass/_colors.scss --watch=true",
+    "download": "npm i -g @timeax/valet@latest"
   },
   "keywords": [],
   "author": "",
