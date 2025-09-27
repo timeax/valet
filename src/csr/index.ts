@@ -153,39 +153,106 @@ export default function csr(program: Command) {
 
 /**
  * Watch `csr.json` and its referenced files for changes.
- * @param sourceDir Directory containing csr.json.
- * @param config The loaded configuration object.
+ * - Always watches: csr.json (or config.configPath)
+ * - Also watches: colors.source (if present) and extra (when it's a string path)
+ *
+ * On any change, reloads config and re-runs runConfig(newConfig).
+ * If referenced paths change, the watcher set is updated (added/removed) live.
  */
 function watchConfig(sourceDir: string, config: Config) {
-   const configPath = config.configPath ?? Fs.fPath("csr.json", sourceDir);
+   // Normalize/resolve a path relative to sourceDir (guard against falsy)
+   const resolveIfExists = (p?: string) => {
+      if (!p) return null;
+      const full = Fs.fPath(p, sourceDir);
+      return Fs.exists(full) ? full : null;
+   };
 
-   // Collect files to watch
-   const filesToWatch: string[] = [
-      configPath,
-      config.colors?.source,
-   ].filter((file) => file && Fs.exists(file)) as string[];
+   // Build a unique list of files to watch from a config object
+   const computeWatchList = (cfg: Config): string[] => {
+      const base = resolveIfExists(cfg.configPath ?? 'csr.json');
+      const colors = resolveIfExists(cfg.colors?.source);
+      const extra =
+         typeof cfg.extra === 'string'
+            ? resolveIfExists(cfg.extra)
+            : null;
 
+      return Array.from(new Set([base, colors, extra].filter(Boolean) as string[]));
+   };
+
+   // Initial watch set
+   let filesToWatch = computeWatchList(config);
    if (filesToWatch.length === 0) {
-      console.warn("No valid files to watch.");
+      console.warn('No valid files to watch.');
       return;
    }
 
    const watcher = chokidar.watch(filesToWatch, { ignoreInitial: true });
 
-   watcher.on("change", async (filePath) => {
-      console.log(`File changed: ${filePath}`);
-      const newConfig = await getConfig(sourceDir);
+   const rebalanceWatchSet = (nextCfg: Config) => {
+      const next = computeWatchList(nextCfg);
 
-      if (newConfig) {
-         runConfig(newConfig);
+      // Add new files
+      for (const f of next) {
+         if (!filesToWatch.includes(f)) {
+            watcher.add(f);
+            console.log(`🧩 Now watching: ${f}`);
+         }
+      }
+
+      // Unwatch removed files
+      for (const f of filesToWatch) {
+         if (!next.includes(f)) {
+            watcher.unwatch(f);
+            console.log(`🗑️ Stopped watching: ${f}`);
+         }
+      }
+
+      filesToWatch = next;
+   };
+
+   watcher.on('change', async (filePath) => {
+      console.log(`♻️  File changed: ${filePath}`);
+      try {
+         const newConfig = await getConfig(sourceDir);
+         if (newConfig) {
+            await runConfig(newConfig);
+            rebalanceWatchSet(newConfig);
+         }
+      } catch (e: any) {
+         console.error('❌ Failed to reload config after change:', e?.message ?? e);
       }
    });
 
-   watcher.on("unlink", (filePath) => {
-      console.warn(`File removed: ${filePath}`);
+   watcher.on('add', async (filePath) => {
+      // If new extra/colors file appears after being missing, re-run to pick it up
+      console.log(`➕ File added: ${filePath}`);
+      try {
+         const newConfig = await getConfig(sourceDir);
+         if (newConfig) {
+            await runConfig(newConfig);
+            rebalanceWatchSet(newConfig);
+         }
+      } catch (e: any) {
+         console.error('❌ Failed to apply config after add:', e?.message ?? e);
+      }
    });
 
-   watcher.on("error", (error) => {
-      console.error("Watcher error:", error);
+   watcher.on('unlink', async (filePath) => {
+      console.warn(`⚠️ File removed: ${filePath}`);
+      try {
+         const newConfig = await getConfig(sourceDir);
+         if (newConfig) {
+            await runConfig(newConfig);
+            rebalanceWatchSet(newConfig);
+         }
+      } catch (e: any) {
+         console.error('❌ Failed to apply config after unlink:', e?.message ?? e);
+      }
    });
+
+   watcher.on('error', (error) => {
+      console.error('Watcher error:', error);
+   });
+
+   console.log('👀 Watching:', filesToWatch.join(', '));
 }
