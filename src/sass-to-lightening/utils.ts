@@ -42,56 +42,120 @@ export function resolveBeaconPaths(config: Config, scss: string, fileDir: string
    return replaced.replace(new RegExp(`\\\\${prefix}<`, 'g'), `${config.beaconPrefix}<`);
 }
 
-/** Pragmatic top-level block reorder: @forward → @use → @import → others */
 export function reorderScssBlocks(config: Config, scss: string): string {
    if (config.reorder === 'off') return scss;
 
-   const lines = scss.split(/\r?\n/);
+   // We only touch TOP-LEVEL @forward/@use/@import.
+   // Everything else (including @layer blocks, selectors, nested rules) is kept exactly as-is.
+
    const forwards: string[] = [];
    const uses: string[] = [];
    const imports: string[] = [];
-   const others: string[] = [];
 
-   let buf: string[] = [];
-   let inAt = false;
-   let type: 'forward' | 'use' | 'import' | null = null;
+   let i = 0;
+   const n = scss.length;
+   let depth = 0;           // { } depth
+   let chunkStart = 0;      // start of current chunk (for "rest")
+   const outPieces: string[] = []; // temporary pieces for "rest" we glue later
 
-   const flush = () => {
-      if (!buf.length) return;
-      const chunk = buf.join('\n');
-      if (type === 'forward') forwards.push(chunk);
-      else if (type === 'use') uses.push(chunk);
-      else if (type === 'import') imports.push(chunk);
-      else others.push(chunk);
-      buf = [];
-      inAt = false;
-      type = null;
+   // Utility: capture a range into "rest"
+   const pushRest = (start: number, end: number) => {
+      if (end > start) outPieces.push(scss.slice(start, end));
    };
 
-   for (const line of lines) {
-      const t = line.trim();
-      const isForward = /^@forward\b/.test(t);
-      const isUse = /^@use\b/.test(t);
-      const isImport = /^@import\b/.test(t);
+   // Utility: from position "pos", if we can read a top-level
+   // @forward/@use/@import ending in ';', return [endIndexExclusive, type, text]
+   const readTopLevelLoad = (pos: number): [number, 'forward' | 'use' | 'import', string] | null => {
+      if (depth !== 0) return null;
+      if (scss.charCodeAt(pos) !== 64 /* @ */) return null;
 
-      if (!inAt && (isForward || isUse || isImport)) {
-         flush();
-         inAt = true;
-         type = isForward ? 'forward' : isUse ? 'use' : 'import';
-         buf.push(line);
-         if (t.endsWith(';')) flush();
+      // quick checks
+      if (scss.startsWith('@forward', pos)) {
+         const semi = scss.indexOf(';', pos);
+         if (semi !== -1) return [semi + 1, 'forward', scss.slice(pos, semi + 1)];
+      } else if (scss.startsWith('@use', pos)) {
+         const semi = scss.indexOf(';', pos);
+         if (semi !== -1) return [semi + 1, 'use', scss.slice(pos, semi + 1)];
+      } else if (scss.startsWith('@import', pos)) {
+         const semi = scss.indexOf(';', pos);
+         if (semi !== -1) return [semi + 1, 'import', scss.slice(pos, semi + 1)];
+      }
+      return null;
+   };
+
+   while (i < n) {
+      const ch = scss[i];
+
+      // Track strings/comments so braces inside them don't affect depth.
+      if (ch === '"' || ch === `'`) {
+         const quote = ch;
+         let j = i + 1;
+         while (j < n) {
+            if (scss[j] === '\\') { j += 2; continue; }
+            if (scss[j] === quote) { j++; break; }
+            j++;
+         }
+         i = j;
          continue;
       }
-      if (inAt) {
-         buf.push(line);
-         if (t.endsWith(';')) flush();
-      } else {
-         others.push(line);
+      if (ch === '/' && i + 1 < n) {
+         const next = scss[i + 1];
+         if (next === '/') {
+            // line comment
+            let j = i + 2;
+            while (j < n && scss[j] !== '\n') j++;
+            i = j;
+            continue;
+         } else if (next === '*') {
+            // block comment
+            let j = i + 2;
+            while (j + 1 < n && !(scss[j] === '*' && scss[j + 1] === '/')) j++;
+            i = Math.min(n, j + 2);
+            continue;
+         }
       }
-   }
-   flush();
 
-   return [forwards, uses, imports, others].map(b => b.join('\n')).filter(Boolean).join('\n');
+      // Only consider @use/@forward/@import at top-level (depth == 0)
+      if (depth === 0 && scss[i] === '@') {
+         const found = readTopLevelLoad(i);
+         if (found) {
+            const [end, kind, text] = found;
+
+            // First, push everything before this at-rule into "rest"
+            pushRest(chunkStart, i);
+            chunkStart = end; // start next rest chunk after this at-rule
+
+            // Bucket the at-rule
+            if (kind === 'forward') forwards.push(text);
+            else if (kind === 'use') uses.push(text);
+            else imports.push(text);
+
+            i = end;
+            continue;
+         }
+      }
+
+      // Track braces for depth
+      if (ch === '{') depth++;
+      else if (ch === '}') depth = Math.max(0, depth - 1);
+
+      i++;
+   }
+
+   // Push final trailing rest
+   pushRest(chunkStart, n);
+
+   // Stitch rest back exactly as it was
+   const restJoined = outPieces.join('');
+
+   // Compose with our ordered top-level loads at the top
+   const header = [
+      forwards.join('\n'),
+      uses.join('\n'),
+      imports.join('\n'),
+   ].filter(Boolean).join('\n');
+
+   return header ? `${header}\n${restJoined}` : restJoined;
 }
 
 /** Compute additionalData for a given file by applying matching rules in order. */
