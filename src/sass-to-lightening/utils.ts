@@ -42,6 +42,10 @@ export function resolveBeaconPaths(config: Config, scss: string, fileDir: string
    return replaced.replace(new RegExp(`\\\\${prefix}<`, 'g'), `${config.beaconPrefix}<`);
 }
 
+export function containsTailwindDirectives(css: string): boolean {
+  return /@tailwind\b|@apply\b|@layer\b|@variants\b|@responsive\b/.test(css);
+}
+
 export function reorderScssBlocks(config: Config, scss: string): string {
    if (config.reorder === 'off') return scss;
 

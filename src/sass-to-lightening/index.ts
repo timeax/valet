@@ -10,6 +10,7 @@ import { Fs } from '@timeax/utilities';
 import type { Config } from './types';
 import {
   buildScssForFile,
+  containsTailwindDirectives,
   getAllScssFiles,
   initializeLightningCss,
   isIgnored,
@@ -69,7 +70,7 @@ const processFile = async (relFile: string): Promise<void> => {
 
     let finalCss = compiled.css;
 
-    if (config.lightningCss && lightningCss) {
+    if (config.lightningCss && lightningCss && !containsTailwindDirectives(finalCss)) {
       const { transform } = lightningCss;
       const result = transform({
         code: Buffer.from(finalCss),
@@ -77,8 +78,10 @@ const processFile = async (relFile: string): Promise<void> => {
         targets: config.targets!,
       });
       finalCss = Buffer.from(result.code).toString();
+    } else if (config.lightningCss && lightningCss) {
+      console.log('ℹ️ Skipping Lightning CSS (Tailwind directives detected).');
     }
-
+    
     Fs.createPath(outputCssPath, { content: finalCss });
     console.log(log(`✅ Processed: ${outputCssPath} (Minify: ${config.minify}, Lightning CSS: ${config.lightningCss})`));
   } catch (error: any) {
