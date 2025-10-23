@@ -64,7 +64,7 @@ function convertBreakpointsToTheme(breakpoints: { [x: string]: string }) {
  * Generate SCSS Functions for Media Queries
  */
 function generateSassFunctions() {
-   return QUERY?.replace(PLACEHOLDER, "@use './breakpoints.scss' as *;\n");;
+   return QUERY?.replace(PLACEHOLDER, "@use './breakpoints.scss' as *;\n");
 }
 
 /**

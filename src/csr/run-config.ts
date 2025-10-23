@@ -296,7 +296,7 @@ export async function runConfig(config: Config) {
    const outFile = config.outFile;
    if (!outFile) {
       console.warn("[runConfig] No outFile provided; skipping Tailwind theme write.");
-      if (config.media) generateMediaQueries(config);
+      if (config.media) await generateMediaQueries(config);
       return;
    }
 
